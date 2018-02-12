@@ -1,0 +1,34 @@
+description: SyncLib is a collection of Communication and Synchronisation libraries, including the hybrid-BSP model.
+keywords:
+  - C++
+  - BSP
+  - MPI
+  - easy
+  - fast
+  - HPC
+website: 'http://synclib.eu/'
+license: MIT
+authors:
+  - name: Mick van Duijn
+    email: m.vanduijn@zefiros.eu
+    website: 'https://zefiros.eu/'
+  - name: Paul Visscher
+    email: p.e.visscher@zefiros.eu
+    website: 'https://zefiros.eu/'
+  - name: Koen Visscher
+    email: k.m.visscher@zefiros.eu
+    website: 'https://zefiros.eu/'
+development:
+  modules:
+    - name: Zefiros-Software/Defaults
+      version: '@head'
+  public:
+    libraries:
+      - name: Zefiros-Software/PlotLib
+        optional: false
+        version: ^2.0.0
+      - name: Zefiros-Software/Fmt
+        version: '@head'
+      - name: Zefiros-Software/Armadillo
+        optional: false
+        version: '>=8.0.0'
