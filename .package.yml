@@ -28,7 +28,7 @@ development:
         optional: false
         version: ^2.0.0
       - name: Zefiros-Software/Fmt
-        version: '@head'
+        version: ^4.0.0
       - name: Zefiros-Software/Armadillo
         optional: false
         version: '>=8.0.0'
