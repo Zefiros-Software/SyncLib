@@ -82,7 +82,7 @@ workspace "SyncLib"
 
     cppdialect "C++17"
 
-    defines "SYNCLIB_ENABLE_MPI"
+    -- defines "SYNCLIB_ENABLE_MPI"
 
     filter "system:windows"
         defines {
@@ -96,27 +96,27 @@ workspace "SyncLib"
         kind "StaticLib"
         cppdialect "C++17"
 
-    project "mpi-pingpong"
-        location("mpi-pingpong")
-        kind "ConsoleApp"
+    -- project "mpi-pingpong"
+    --     location("mpi-pingpong")
+    --     kind "ConsoleApp"
 
-        linkMPI()
+    --     linkMPI()
 
-        zpm.uses {
-            "Zefiros-Software/Fmt"
-        }
+    --     zpm.uses {
+    --         "Zefiros-Software/Fmt"
+    --     }
 
-        includedirs {
-            "mpi-pingpong",
-            "sync/include"
-        }
+    --     includedirs {
+    --         "mpi-pingpong",
+    --         "sync/include"
+    --     }
 
-        files {
-            "mpi-pingpong/**/*.cpp",
-            "mpi-pingpong/*.cpp",
-            "mpi-pingpong/**/*.h",
-            "mpi-pingpong/*.h"
-        }
+    --     files {
+    --         "mpi-pingpong/**/*.cpp",
+    --         "mpi-pingpong/*.cpp",
+    --         "mpi-pingpong/**/*.h",
+    --         "mpi-pingpong/*.h"
+    --     }
 
     project "edupack-bench"
         location("edupack")
