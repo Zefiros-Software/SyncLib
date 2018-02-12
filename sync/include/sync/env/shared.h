@@ -37,8 +37,8 @@
 #include "sync/variables/sharedValue.h"
 
 #include "sync/util/functionTraits.h"
+#include "sync/util/algorithm.h"
 #include "sync/util/dataType.h"
-#include "sync/util/splitFor.h"
 #include "sync/util/threads.h"
 
 #include <type_traits>

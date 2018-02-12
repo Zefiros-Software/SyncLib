@@ -1,0 +1,22 @@
+version: '2.3'
+services:
+  openmpi:
+    build:
+      context: ./docker/openmpi
+    volumes:
+      - .:/app
+      - openmpi-virtual-bin:/app/bin
+      - openmpi-persist-zpm:/home/openmpi/.zpm
+  mpich:
+    build:
+      context: ./docker/mpich
+    volumes:
+      - .:/app
+      - mpich-virtual-bin:/app/bin
+      - mpich-persist-zpm:/home/mpich/.zpm
+
+volumes:
+  openmpi-persist-zpm:
+  openmpi-virtual-bin:
+  mpich-persist-zpm:
+  mpich-virtual-bin:

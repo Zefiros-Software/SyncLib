@@ -79,8 +79,10 @@ workspace "SyncLib"
     zefiros.setDefaults( "sync", {
         mayLink = false
     } )
-    
+
     cppdialect "C++17"
+
+    defines "SYNCLIB_ENABLE_MPI"
 
     filter "system:windows"
         defines {

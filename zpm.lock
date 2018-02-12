@@ -1,0 +1,79 @@
+{
+  "definition": "./",
+  "optionals": [],
+  "private": {
+    "modules": [ {
+      "definition": "https://github.com/Zefiros-Software/ZefirosDefaults.git",
+      "hash": "130feb5efe53d69a63c995e4d37e0edd0f9bbb80",
+      "name": "Zefiros-Software/Defaults",
+      "public": {
+        "libraries": [ {
+          "definition": "https://github.com/Zefiros-Software/GoogleTest.git",
+          "hash": "a3c73ed28d7995b18d48027aee740ad827fcc157",
+          "name": "Zefiros-Software/GoogleTest",
+          "repository": "https://github.com/google/googletest.git",
+          "tag": "HEAD",
+          "versionRequirement": "@head || ^1.0.0"
+        }, {
+          "definition": "https://github.com/Zefiros-Software/GoogleBenchmark.git",
+          "hash": "bc83262f9d687ac7e31509b3f5177ff391a7452a",
+          "name": "Zefiros-Software/GoogleBenchmark",
+          "repository": "https://github.com/google/benchmark.git",
+          "tag": "HEAD",
+          "versionRequirement": "@head"
+        } ]
+      },
+      "repository": "https://github.com/Zefiros-Software/ZefirosDefaults.git",
+      "tag": "HEAD",
+      "versionRequirement": "@head"
+    } ]
+  },
+  "public": {
+    "libraries": [ {
+      "definition": "https://github.com/Zefiros-Software/PlotLib.git",
+      "hash": "d22076c5d5fccfab61f4b18099a8a504e14110dc",
+      "name": "Zefiros-Software/PlotLib",
+      "optionals": {
+        "libraries": [ {
+          "name": "Zefiros-Software/Armadillo",
+          "versionRequirement": "^7.800.0"
+        } ]
+      },
+      "private": {
+        "modules": [ {
+          "definition": "https://github.com/Zefiros-Software/Miniconda.git",
+          "hash": "a72fd309fcdbd684a4f1bd9d4fd9e835562beea6",
+          "name": "Zefiros-Software/Miniconda",
+          "repository": "https://github.com/Zefiros-Software/Miniconda.git",
+          "tag": "HEAD",
+          "versionRequirement": "@head"
+        } ]
+      },
+      "repository": "https://github.com/Zefiros-Software/PlotLib.git",
+      "tag": "2.0.2",
+      "version": "2.0.2",
+      "versionRequirement": "^2.0.0"
+    }, {
+      "definition": "https://github.com/Zefiros-Software/Fmt.git",
+      "hash": "867b330966f7082d196852f3a7f68c8d1cba83f0",
+      "name": "Zefiros-Software/Fmt",
+      "repository": "https://github.com/fmtlib/fmt.git",
+      "tag": "HEAD",
+      "versionRequirement": "@head"
+    }, {
+      "definition": "https://github.com/Zefiros-Software/ArmadilloBuild.git",
+      "hash": "43c38c2e99952aaa99fba2c27fa0e06795de1f7c",
+      "name": "Zefiros-Software/Armadillo",
+      "optionals": {
+        "libraries": [ {
+          "name": "Zefiros-Software/MKL",
+          "versionRequirement": "@head"
+        } ]
+      },
+      "repository": "https://github.com/conradsnicta/armadillo-code.git",
+      "tag": "8.200.x",
+      "versionRequirement": ">=8.0.0"
+    } ]
+  },
+  "repository": "./"
+}
