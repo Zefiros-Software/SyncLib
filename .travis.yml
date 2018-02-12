@@ -1,0 +1,94 @@
+sudo: required
+language: generic
+matrix:
+  include:
+  - os: osx
+    osx_image: xcode8.3
+    language: generic
+    env:
+    - BUILD_CONFIG=release
+    - BUILD_ARCHITECTURE=x86
+  - os: osx
+    osx_image: xcode8.3
+    language: generic
+    env:
+    - BUILD_CONFIG=debug
+    - BUILD_ARCHITECTURE=x86
+  - os: osx
+    osx_image: xcode8.3
+    language: generic
+    env:
+    - BUILD_CONFIG=release
+    - BUILD_ARCHITECTURE=x86_64
+  - os: osx
+    osx_image: xcode8.3
+    language: generic
+    env:
+    - BUILD_CONFIG=debug
+    - BUILD_ARCHITECTURE=x86_64
+  - os: linux
+    dist: trusty
+    env:
+    - BUILD_CONFIG=coverage
+    - BUILD_ARCHITECTURE=x86_64
+    - GCC_VERSION=7
+  - os: linux
+    dist: trusty
+    env:
+    - BUILD_CONFIG=release
+    - BUILD_ARCHITECTURE=x86_64
+    - GCC_VERSION=7
+  - os: linux
+    dist: trusty
+    env:
+    - BUILD_CONFIG=debug
+    - BUILD_ARCHITECTURE=x86_64
+    - GCC_VERSION=7
+  - os: linux
+    dist: trusty
+    env:
+    - BUILD_CONFIG=release
+    - BUILD_ARCHITECTURE=x86
+    - GCC_VERSION=7
+  - os: linux
+    dist: trusty
+    env:
+    - BUILD_CONFIG=release
+    - BUILD_ARCHITECTURE=x86_64
+    - GCC_VERSION=6
+  - os: linux
+    dist: trusty
+    env:
+    - BUILD_CONFIG=debug
+    - BUILD_ARCHITECTURE=x86_64
+    - GCC_VERSION=5
+  - os: linux
+    dist: trusty
+    env:
+    - BUILD_CONFIG=release
+    - BUILD_ARCHITECTURE=x86_64
+    - GCC_VERSION=5
+  - os: linux
+    dist: trusty
+    env:
+    - BUILD_CONFIG=release
+    - BUILD_ARCHITECTURE=x86
+    - GCC_VERSION=5
+  - os: linux
+    dist: trusty
+    env:
+    - BUILD_CONFIG=zpm
+    - GCC_VERSION=5
+global:
+  env:
+  - PROJECT=SyncLib
+  - PROJECT_DIRECTORY=sync
+install:
+- source /dev/stdin <<< "$(curl -s https://raw.githubusercontent.com/Zefiros-Software/ZPM/features/refactor/script/install-zpm.sh)"
+script:
+- zpm run build-ci-library
+after_success:
+- zpm run deploy-ci-library
+# notifications:
+#   slack:
+#     secure: 
