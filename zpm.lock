@@ -4,19 +4,19 @@
   "private": {
     "modules": [ {
       "definition": "https://github.com/Zefiros-Software/ZefirosDefaults.git",
-      "hash": "130feb5efe53d69a63c995e4d37e0edd0f9bbb80",
+      "hash": "06075c936e348ee256cf5c05e449ce8d8f32054b",
       "name": "Zefiros-Software/Defaults",
       "public": {
         "libraries": [ {
           "definition": "https://github.com/Zefiros-Software/GoogleTest.git",
-          "hash": "a3c73ed28d7995b18d48027aee740ad827fcc157",
+          "hash": "222607a019638b104f67b5bd6cf7572a091500b2",
           "name": "Zefiros-Software/GoogleTest",
           "repository": "https://github.com/google/googletest.git",
           "tag": "HEAD",
           "versionRequirement": "@head || ^1.0.0"
         }, {
           "definition": "https://github.com/Zefiros-Software/GoogleBenchmark.git",
-          "hash": "bc83262f9d687ac7e31509b3f5177ff391a7452a",
+          "hash": "296ec5693e7dae47c50244a70297172fab69ccae",
           "name": "Zefiros-Software/GoogleBenchmark",
           "repository": "https://github.com/google/benchmark.git",
           "tag": "HEAD",
@@ -55,7 +55,7 @@
       "versionRequirement": "^2.0.0"
     }, {
       "definition": "https://github.com/Zefiros-Software/Fmt.git",
-      "hash": "867b330966f7082d196852f3a7f68c8d1cba83f0",
+      "hash": "f3f19e762ff8fb6b97a03f0690ab893a46253b25",
       "name": "Zefiros-Software/Fmt",
       "repository": "https://github.com/fmtlib/fmt.git",
       "tag": "HEAD",
