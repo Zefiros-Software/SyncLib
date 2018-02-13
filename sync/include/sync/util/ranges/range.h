@@ -98,7 +98,7 @@ namespace SyncLib
 
                 SteppedRange<tT> Reverse()
                 {
-                    return SteppedRange(mStart, mStop, mStep);
+                    return SteppedRange<tT>(mStart, mStop, mStep);
                 }
 
             private:
@@ -432,13 +432,13 @@ namespace SyncLib
         template<typename tIterable1, typename tIterable2>
         auto Zip(tIterable1 &first, tIterable2 &second)
         {
-            return Internal::ZipIterators(first.begin(), first.end(), second.begin());
+            return Internal::ZipIterators<tIterable1, tIterable2>(first.begin(), first.end(), second.begin());
         }
 
         template<typename tIterable1, typename tIterable2>
         auto Zip(const tIterable1 &first, const tIterable2 &second)
         {
-            return Internal::ZipIterators(first.begin(), first.end(), second.begin());
+            return Internal::ZipIterators<tIterable1, tIterable2>(first.begin(), first.end(), second.begin());
         }
     }
 }
