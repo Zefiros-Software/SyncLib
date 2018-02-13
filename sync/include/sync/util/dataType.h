@@ -27,6 +27,10 @@
 #ifndef __SYNCLIB__DATATYPE_H__
 #define __SYNCLIB__DATATYPE_H__
 
+#include <stdint.h>
+#include <string.h>
+#include <vector>
+
 namespace SyncLib
 {
     namespace Internal
