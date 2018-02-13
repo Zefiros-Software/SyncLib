@@ -65,7 +65,7 @@ namespace SyncLib
                                                sizeof(tT);          // value
 
                 char *cursor = tParent::GetTargetPutBuffer(target).Reserve(requestSize);
-                tParent::WriteData(cursor, tDataTypeEnum::value, tParent::mIndex, sizeof(tT), offset, value);
+                tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, sizeof(tT), offset, value);
             }
 
             void BroadcastValue(const tT &value, size_t offset)
@@ -92,7 +92,7 @@ namespace SyncLib
                                      sizeof(tT) * count;    // values
 
                 char *cursor = tParent::GetTargetPutBuffer(target).Reserve(requestSize);
-                cursor = tParent::WriteData(cursor, tDataTypeEnum::value, tParent::mIndex, sizeof(tT) * count, offset);
+                cursor = tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, sizeof(tT) * count, offset);
                 tParent::WriteIter(cursor, beginIt, endIt);
             }
 

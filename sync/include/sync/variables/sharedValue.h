@@ -63,7 +63,7 @@ namespace SyncLib
                 constexpr size_t offset = 0;
 
                 char *cursor = tParent::GetTargetPutBuffer(target).Reserve(requestSize);
-                tParent::WriteData(cursor, tDataTypeEnum::value, tParent::mIndex, sizeof(tT), value);
+                tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, sizeof(tT), value);
             }
 
             void Put(size_t target)
@@ -92,7 +92,7 @@ namespace SyncLib
 
                 {
                     char *cursor = tParent::GetTargetGetRequests(target).Reserve(requestSize);
-                    tParent::WriteData(cursor, tDataTypeEnum::value, tParent::mIndex, sizeof(tT));
+                    tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, sizeof(tT));
                 }
 
                 {

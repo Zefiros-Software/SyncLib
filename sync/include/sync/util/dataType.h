@@ -55,70 +55,44 @@ namespace SyncLib
         template<typename tT>
         struct DataTypeEnum
         {
-            static constexpr DataType value = DataType::Serialisable;
+            static constexpr DataType GetEnum()
+            {
+                return DataType::Serialisable;
+            }
         };
 
-        template<>
-        struct DataTypeEnum<uint8_t>
-        {
-            static constexpr DataType value = DataType::U8;
-        };
-        template<>
-        struct DataTypeEnum<uint16_t>
-        {
-            static constexpr DataType value = DataType::U16;
-        };
-        template<>
-        struct DataTypeEnum<uint32_t>
-        {
-            static constexpr DataType value = DataType::U32;
-        };
-        template<>
-        struct DataTypeEnum<uint64_t>
-        {
-            static constexpr DataType value = DataType::U64;
-        };
-        template<>
-        struct DataTypeEnum<int8_t>
-        {
-            static constexpr DataType value = DataType::S8;
-        };
-        template<>
-        struct DataTypeEnum<int16_t>
-        {
-            static constexpr DataType value = DataType::S16;
-        };
-        template<>
-        struct DataTypeEnum<int32_t>
-        {
-            static constexpr DataType value = DataType::S32;
-        };
-        template<>
-        struct DataTypeEnum<int64_t>
-        {
-            static constexpr DataType value = DataType::S64;
+#define SYNCLIB_DATATYPE_MAPPING(type, dataType)    \
+        template<>                                  \
+        struct DataTypeEnum<type>                   \
+        {                                           \
+            static constexpr DataType GetEnum()     \
+            {                                       \
+                return dataType;                    \
+            }                                       \
         };
 
-        template<>
-        struct DataTypeEnum<float>
-        {
-            static constexpr DataType value = DataType::Float;
-        };
-        template<>
-        struct DataTypeEnum<double>
-        {
-            static constexpr DataType value = DataType::Double;
-        };
-        template<>
-        struct DataTypeEnum<std::string>
-        {
-            static constexpr DataType value = DataType::String;
-        };
+        SYNCLIB_DATATYPE_MAPPING(uint8_t,  DataType::U8)
+        SYNCLIB_DATATYPE_MAPPING(uint16_t, DataType::U16)
+        SYNCLIB_DATATYPE_MAPPING(uint32_t, DataType::U32)
+        SYNCLIB_DATATYPE_MAPPING(uint64_t, DataType::U64)
+        SYNCLIB_DATATYPE_MAPPING(int8_t,   DataType::S8)
+        SYNCLIB_DATATYPE_MAPPING(int16_t,  DataType::S16)
+        SYNCLIB_DATATYPE_MAPPING(int32_t,  DataType::S32)
+        SYNCLIB_DATATYPE_MAPPING(int64_t,  DataType::S64)
+
+        SYNCLIB_DATATYPE_MAPPING(float, DataType::Float)
+        SYNCLIB_DATATYPE_MAPPING(double, DataType::Double)
+        SYNCLIB_DATATYPE_MAPPING(std::string, DataType::String)
+
+#undef SYNCLIB_DATATYPE_MAPPING
 
         template<typename tT>
         struct DataTypeEnum<std::vector<tT>>
         {
-            static constexpr DataType value = DataType::Array | DataTypeEnum<tT>::value;
+            static constexpr DataType GetEnum()
+            {
+                return DataType::Array | DataTypeEnum<tT>::GetEnum();
+            }
         };
 
         constexpr DataType operator~(const DataType &dataType)
