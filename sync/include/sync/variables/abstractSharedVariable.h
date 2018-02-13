@@ -52,11 +52,6 @@ namespace SyncLib
                 return mIndex;
             }
 
-            virtual void FinalisePut(char * /*cursor*/, size_t /*size*/)
-            {
-                throw "This should never be called directly";
-            };
-
         protected:
 
             size_t mIndex;

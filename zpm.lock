@@ -9,10 +9,11 @@
       "public": {
         "libraries": [ {
           "definition": "https://github.com/Zefiros-Software/GoogleTest.git",
-          "hash": "9d1a80c0fbc03d8c824e0263d27d419b38b61bf4",
+          "hash": "a3ac2d7faa9cc6d38d69321f293925f72edf6727",
           "name": "Zefiros-Software/GoogleTest",
           "repository": "https://github.com/google/googletest.git",
-          "tag": "HEAD",
+          "tag": "release-1.8.0",
+          "version": "1.8.0",
           "versionRequirement": "@head || ^1.0.0"
         }, {
           "definition": "https://github.com/Zefiros-Software/GoogleBenchmark.git",
@@ -55,10 +56,11 @@
       "versionRequirement": "^2.0.0"
     }, {
       "definition": "https://github.com/Zefiros-Software/Fmt.git",
-      "hash": "867b330966f7082d196852f3a7f68c8d1cba83f0",
+      "hash": "135ab5cf71ed731fc9fa0653051e7d4884a3652f",
       "name": "Zefiros-Software/Fmt",
       "repository": "https://github.com/fmtlib/fmt.git",
-      "tag": "4.x",
+      "tag": "4.1.0",
+      "version": "4.1.0",
       "versionRequirement": "^4.0.0"
     }, {
       "definition": "https://github.com/Zefiros-Software/ArmadilloBuild.git",
