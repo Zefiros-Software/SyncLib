@@ -29,9 +29,9 @@
 #include "sync/env/shared.h"
 
 #include <stdint.h>
+#include <numeric>
 #include <thread>
 #include <tuple>
-#include <numeric>
 
 //#define TEST_RANGE(type)
 
