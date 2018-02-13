@@ -7,7 +7,7 @@ Linux & OSX | [![Build Status](https://travis-ci.org/Zefiros-Software/SyncLib.sv
 Windows     | [![Build status](https://ci.appveyor.com/api/projects/status/sqlbhqms71fpvev2?svg=true)](https://ci.appveyor.com/project/Zefiros-Software/synclib)
 Coverage	| [![codecov](https://codecov.io/gh/Zefiros-Software/SyncLib/branch/master/graph/badge.svg)](https://codecov.io/gh/Zefiros-Software/SyncLib)
 
-#Documentation
+# Documentation
 ### WIP
 
 ## Why SyncLib?
