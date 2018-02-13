@@ -5,6 +5,7 @@ environment:
   PYTHON: "C:\\Python35"
   PROJECT: SyncLib
   PROJECT_DIRECTORY: sync
+  VS_VERSION: vs2017
   matrix:  
     - TYPE: zpm
     - BUILD_CONFIG: release
