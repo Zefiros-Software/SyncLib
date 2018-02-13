@@ -50,6 +50,12 @@ matrix:
     - BUILD_CONFIG=release
     - BUILD_ARCHITECTURE=x86
     - GCC_VERSION=7
+  - os: linux
+    dist: trusty
+    env:
+    - BUILD_CONFIG=debug
+    - BUILD_ARCHITECTURE=x86
+    - GCC_VERSION=7
 global:
   env:
   - PROJECT=SyncLib
