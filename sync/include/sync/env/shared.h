@@ -27,6 +27,8 @@
 #ifndef __SYNCLIB_ENV_SHARED_H__
 #define __SYNCLIB_ENV_SHARED_H__
 
+#include "sync/barrier/shared/condVarBarrier.h"
+#include "sync/barrier/shared/mixedBarrier.h"
 #include "sync/barrier/shared/spinBarrier.h"
 
 #include "sync/buffers/processor.h"
@@ -157,7 +159,7 @@ namespace SyncLib
                 auto lambda = [&](size_t s)
                 {
                     GetRank(&s);
-                    Internal::PinThread(s);
+                    //Internal::PinThread(s);
 
                     return func(*this, std::forward<tArgs>(args)...);
                 };
@@ -359,6 +361,8 @@ namespace SyncLib
         private:
 
             Internal::SpinBarrier mBarrier;
+            // Internal::MixedBarrier<50000> mBarrier;
+            // Internal::CondVarBarrier mBarrier;
             size_t mSize;
 
             std::vector<Internal::ProcessorBuffers<SharedMemoryBSP>> mProcessorBuffers;

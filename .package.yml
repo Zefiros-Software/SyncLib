@@ -32,6 +32,9 @@ development:
       - name: Zefiros-Software/Armadillo
         optional: false
         version: '>=8.0.0'
+      - name: Zefiros-Software/Json
+        version: '^3.0.0'
+        optional: false
 settings:
   enableMPI:
     default: false
