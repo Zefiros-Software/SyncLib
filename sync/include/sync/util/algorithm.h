@@ -29,6 +29,7 @@
 
 #include "sync/defines.h"
 
+#include <armadillo>
 
 namespace SyncLib
 {
@@ -58,6 +59,53 @@ namespace SyncLib
             v |= v >> 8;
             v |= v >> 16;
             return ++v;
+        }
+
+        template<typename tT>
+        arma::Col<tT> ArmaRange(const tT &start, const tT &stop, const tT &delta)
+        {
+            return arma::regspace<arma::Col<tT>>(start, delta, stop);
+        }
+
+        template<typename tT>
+        arma::Col<tT> ArmaRange(const tT &start, const tT &stop)
+        {
+            return arma::regspace<arma::Col<tT>>(start, stop);
+        }
+
+        template<typename tIterator>
+        auto MinMax(tIterator begin, tIterator end)
+        {
+            auto minmaxtime = std::minmax_element(begin, end);
+            return std::make_tuple(*minmaxtime.first, *minmaxtime.second);
+        }
+
+        template<typename tT>
+        auto ArgMax(const arma::Mat<tT> &data)
+        {
+            auto argMax = arma::ind2sub(arma::SizeMat(data.n_rows, data.n_cols), data.index_max());
+            return std::make_tuple(argMax[0], argMax[1]);
+        }
+
+        template<typename tMat>
+        auto ArgMax(const tMat &data, const arma::SizeMat &shape)
+        {
+            auto argMax = arma::ind2sub(shape, data.index_max());
+            return std::make_tuple(argMax[0], argMax[1]);
+        }
+
+        template<typename tT>
+        auto ArgMin(const arma::Mat<tT> &data)
+        {
+            auto argMin = arma::ind2sub(arma::SizeMat(data.n_rows, data.n_cols), data.index_min());
+            return std::make_tuple(argMin[0], argMin[1]);
+        }
+
+        template<typename tMat>
+        auto ArgMin(const tMat &data, const arma::SizeMat &shape)
+        {
+            auto argMin = arma::ind2sub(shape, data.index_min());
+            return std::make_tuple(argMin[0], argMin[1]);
         }
     }
 }

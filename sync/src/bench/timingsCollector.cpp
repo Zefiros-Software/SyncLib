@@ -23,40 +23,39 @@
  *
  * @endcond
  */
-#pragma once
-#ifndef __SYNCLIB_THREADS_H__
-#define __SYNCLIB_THREADS_H__
+#include "sync/bench/timingsCollector.h"
 
-#include <future>
-#ifdef _WIN32
-#include <windows.h>
-#endif
+using json = ::nlohmann::json;
 
-namespace SyncLib
+SyncLib::Bench::TimingsCollector::TimingsCollector(size_t p, size_t s, size_t maxCount)
+    : mTimings(p, std::vector<std::vector<double>>(maxCount)),
+      mP(p),
+      mS(s),
+      mMaxCount(maxCount)
 {
-    namespace Internal
-    {
-        inline void PinThread(size_t s)
-        {
-            int maxS = static_cast<int>(std::thread::hardware_concurrency());
-            int core = static_cast<int>(s) % maxS;
-#ifdef _WIN32
-            DWORD_PTR mask = 1;
-            mask = mask << core;
-            SetThreadAffinityMask(GetCurrentThread(), mask);
-            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
-#endif // _WIN32
-
-#if defined(__GNUC__) && !defined(__APPLE__)
-            cpu_set_t cpuset;
-            CPU_ZERO(&cpuset);
-            CPU_SET(core, &cpuset);
-
-            pthread_t currentThread = pthread_self();
-            pthread_setaffinity_np(currentThread, sizeof(cpu_set_t), &cpuset);
-#endif
-        }
-    }
 }
 
-#endif
+const std::vector<double> &SyncLib::Bench::TimingsCollector::GetCountTimings(size_t t, size_t count) const
+{
+    return mTimings[t][count - 1];
+}
+
+void SyncLib::Bench::TimingsCollector::AddTiming(size_t t, size_t count, double timing)
+{
+    mTimings[t][count - 1].push_back(timing);
+}
+
+const size_t &SyncLib::Bench::TimingsCollector::GetP() const
+{
+    return mP;
+}
+
+const size_t &SyncLib::Bench::TimingsCollector::GetS() const
+{
+    return mS;
+}
+
+const size_t &SyncLib::Bench::TimingsCollector::GetMaxCount() const
+{
+    return mMaxCount;
+}

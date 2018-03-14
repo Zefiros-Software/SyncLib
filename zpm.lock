@@ -4,20 +4,19 @@
   "private": {
     "modules": [ {
       "definition": "https://github.com/Zefiros-Software/ZefirosDefaults.git",
-      "hash": "06075c936e348ee256cf5c05e449ce8d8f32054b",
+      "hash": "a539f143ed71c341db0acde5e13faabdc3925e3d",
       "name": "Zefiros-Software/Defaults",
       "public": {
         "libraries": [ {
           "definition": "https://github.com/Zefiros-Software/GoogleTest.git",
-          "hash": "a3ac2d7faa9cc6d38d69321f293925f72edf6727",
+          "hash": "f35fe6de3b25671099de0bf69b016eed3832dc9e",
           "name": "Zefiros-Software/GoogleTest",
           "repository": "https://github.com/google/googletest.git",
-          "tag": "release-1.8.0",
-          "version": "1.8.0",
+          "tag": "HEAD",
           "versionRequirement": "@head || ^1.0.0"
         }, {
           "definition": "https://github.com/Zefiros-Software/GoogleBenchmark.git",
-          "hash": "296ec5693e7dae47c50244a70297172fab69ccae",
+          "hash": "a9beffda0b89a6995372100456a4ad894d29b93b",
           "name": "Zefiros-Software/GoogleBenchmark",
           "repository": "https://github.com/google/benchmark.git",
           "tag": "HEAD",
@@ -25,6 +24,13 @@
         } ]
       },
       "repository": "https://github.com/Zefiros-Software/ZefirosDefaults.git",
+      "tag": "HEAD",
+      "versionRequirement": "@head"
+    }, {
+      "definition": "https://github.com/Zefiros-Software/MPI.git",
+      "hash": "861c63d876c98ca43bb5a7952fed182b1282a0c0",
+      "name": "Zefiros-Software/MPI",
+      "repository": "https://github.com/Zefiros-Software/MPI.git",
       "tag": "HEAD",
       "versionRequirement": "@head"
     } ]
@@ -64,7 +70,7 @@
       "versionRequirement": "^4.0.0"
     }, {
       "definition": "https://github.com/Zefiros-Software/ArmadilloBuild.git",
-      "hash": "43c38c2e99952aaa99fba2c27fa0e06795de1f7c",
+      "hash": "7c66dd017429d5f7a446bbbe4fc91ecb01d56a93",
       "name": "Zefiros-Software/Armadillo",
       "optionals": {
         "libraries": [ {
@@ -73,8 +79,34 @@
         } ]
       },
       "repository": "https://github.com/conradsnicta/armadillo-code.git",
-      "tag": "8.200.x",
+      "tag": "8.400.x",
       "versionRequirement": ">=8.0.0"
+    }, {
+      "definition": "https://github.com/Zefiros-Software/Json.git",
+      "hash": "8968adcd53951b652f9f480ad62e66dc2714b061",
+      "name": "Zefiros-Software/Json",
+      "repository": "https://github.com/nlohmann/json.git",
+      "tag": "v3.1.1",
+      "version": "3.1.1",
+      "versionRequirement": "^3.0.0"
+    }, {
+      "definition": "https://github.com/Zefiros-Software/Args.git",
+      "hash": "0db4bfa15de7aba4165aee9a1c18a7f28387e3b6",
+      "name": "Zefiros-Software/Args",
+      "public": {
+        "libraries": [ {
+          "definition": "https://github.com/Zefiros-Software/cxxopts.git",
+          "hash": "8893afe13cc47dd0be4f25b5ae491e652c146098",
+          "name": "Zefiros-Software/cxxopts",
+          "repository": "https://github.com/jarro2783/cxxopts.git",
+          "tag": "v2.0.0",
+          "version": "2.0.0",
+          "versionRequirement": ">=2.0.0"
+        } ]
+      },
+      "repository": "https://github.com/Zefiros-Software/Args.git",
+      "tag": "HEAD",
+      "versionRequirement": "@head"
     } ]
   },
   "repository": "./"

@@ -23,83 +23,98 @@
  *
  * @endcond
  */
-#include "sync/bindings/mpi.h"
+#include "sync/bench/partitioning.h"
+#include "sync/bench/mpiPingpong.h"
 
-#include "sync/util/algorithm.h"
-#include "sync/util/timer.h"
+#include "sync/util/time.h"
 
+#include "args/args.h"
+
+#include "nlohmann/json.hpp"
 #include "fmt/format.h"
 
-#include <iostream>
+#include <armadillo>
+
+#include <experimental/filesystem>
+#include <iomanip>
+#include <ctime>
+
+namespace fs = std::experimental::filesystem;
 
 int main(int argc, char *argv[])
 {
     SyncLib::MPI::Comm comm(argc, argv);
 
-    SyncLib::Util::Timer<> timer;
+    uint32_t q = 0;
+    std::string outputFile = "run";
 
-    size_t s = comm.Rank();
-    size_t p = comm.Size();
-    size_t p2 = SyncLib::Util::NextPowerOfTwo(p);
-    size_t receive;
+    if (comm.Rank() == 0)
+    {
+        Args args("bench", "MPI pingpong");
+        std::string timestamp = SyncLib::Util::GetTimeString();
+        args.AddOptions(
+        {
+            { { "q", "parts" }, "Number of parts for partitioning.", Option::U32(), "0", "0" },
+            { { "o", "output"}, "Output file for timings.", Option::String(), timestamp, timestamp}
+        });
+        args.Parse(argc, argv);
 
-    std::vector<double> timings(p, 0.0);
-    constexpr size_t repetitions = 50000;
-    constexpr size_t rotations = 20;
+        q = args.GetOption("parts");
+        outputFile = args.GetOption("output");
+    }
 
+    comm.Broadcast(q, 0);
+
+    SyncLib::Bench::MPIPingPongBenchmark bench(comm);
+    bench.PingPong();
+
+    {
+        std::ofstream out;
+
+        if (comm.Rank() == 0)
+        {
+            fs::path results("./results");
+
+            if (!fs::exists(results))
+            {
+                fs::create_directory(results);
+            }
+
+            out.open(results / fmt::format("{}.json", outputFile));
+        }
+
+        bench.Serialise(out);
+    }
+
+    auto [G, L] = bench.ComputePairwise();
+
+    //     using json = nlohmann::json;
+    //     Args args("bench", "Edupack benchmark");
+    //     args.AddOptions({ { "timings", "File with timings", Option::String() } });
+    //     args.Parse(argc, argv);
+    //
+    //     nlohmann::json data;
+    //     {
+    //         namespace fs = std::experimental::filesystem;
+    //         fs::path timings(fs::absolute(args.GetOption("timings").Get<std::string>()));
+    //         std::ifstream(timings) >> data;
+    //     }
+    //     arma::mat distances, L;
+    //     std::tie(distances, L) = SyncLib::Bench::MPIPingPongBenchmark::ComputePairwise(data);
+    auto parts = SyncLib::Partitioning::MakeImprovedClusterInitialisedPartitioning(G, q);
+
+    if (comm.Rank() == 0)
+    {
+        fmt::print("Original max: {}\n", G.max());
+
+        for (auto &part : parts)
+        {
+            arma::uvec slicer(part);
+            fmt::print("Max in part of size {}: {}\n", slicer.size(), G(slicer, slicer).max());
+        }
+    }
+
+    //system("pause");
     comm.Barrier();
-
-
-    for (size_t i = 0; i < rotations; ++i)
-    {
-        for (size_t mask = 1; mask < p2; ++mask)
-        {
-            size_t t = s ^ mask;
-
-            if (t < p)
-            {
-                if (s < t)
-                {
-                    fmt::print("Performing ping-pong measurement between {} and {}\n", s, t);
-                    fflush(stdout);
-                }
-
-                timer.Tic();
-
-                for (size_t j = 0; j < repetitions; ++j)
-                {
-                    comm.SendReceive(t, &s, 1, &receive, 1);
-                }
-
-                double elapsed = timer.Toc() * 1000;
-
-                timings[t] += elapsed;
-            }
-
-            comm.Barrier();
-        }
-    }
-
-    for (size_t s2 = 0; s2 < p; ++s2)
-    {
-        if (s != s2)
-        {
-            comm.Barrier();
-            continue;
-        }
-
-        for (size_t mask = 1; mask < p2; ++mask)
-        {
-            size_t t = s ^ mask;
-
-            if (t < p)
-            {
-                fmt::print("Average communication time between {} and {}: {:>8.4f}us\n", s, t, timings[t] * 1000 / repetitions / rotations);
-            }
-        }
-
-        fmt::print("\n");
-
-        comm.Barrier();
-    }
+    return EXIT_SUCCESS;
 }

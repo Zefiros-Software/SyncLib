@@ -23,23 +23,26 @@
  *
  * @endcond
  */
+#include "sync/bench/partitioning.h"
+#include "sync/bench/mpiPingpong.h"
+#include "sync/util/algorithm.h"
+
 #include "bench.h"
-#include <numeric>
-#include <algorithm>
+
+#include "args/args.h"
+
+#include "nlohmann/json.hpp"
+
 #include <armadillo>
+
+#include <experimental/filesystem>
+#include <algorithm>
+#include <numeric>
 
 #define NITERS 5000
 #define MAXN 1024
 #define MAXH 256
 #define MEGA 1000000.0
-
-template<typename tT>
-arma::Col<tT> ArmaRange(const tT &start, const tT &stop)
-{
-    arma::Col<tT> x;
-    arma::internal_regspace_default_delta(x, start, stop);
-    return x;
-}
 
 auto LeastSquares(size_t h0, size_t h1, const std::vector<double> &t)
 {
@@ -56,7 +59,7 @@ auto LeastSquares(size_t h0, size_t h1, const std::vector<double> &t)
 
     arma::vec subT = arma::vec(t).rows(h0, h1 + 1);
     double sumt = arma::sum(subT);
-    double sumth = arma::sum(subT % ArmaRange(h0, h1 + 1));
+    double sumth = arma::sum(subT % SyncLib::Util::ArmaRange(h0, h1 + 1));
 
     size_t nh = h1 - h0 + 1;
     size_t sumh = (h1 * (h1 + 1) - (h0 - 1) * h0) / 2;
@@ -74,13 +77,6 @@ auto LeastSquares(size_t h0, size_t h1, const std::vector<double> &t)
     double l = (sumth - sumhh * g) / sumh;
 
     return std::make_tuple(g, l);
-}
-
-template<typename tIterator>
-auto MinMax(tIterator begin, tIterator end)
-{
-    auto minmaxtime = std::minmax_element(begin, end);
-    return std::make_tuple(*minmaxtime.first, *minmaxtime.second);
 }
 
 template<typename tTimer>
@@ -143,13 +139,13 @@ struct BenchReporter
         fmt::print("p= {}, r= {:.3f} Mflop/s, g= {:.1f}, l= {:.1f}\n", p, rDivMega, g, l);
     }
 
-    static size_t RequestP(size_t maxP)
+    static size_t RequestP(size_t maxP, bool restrictP = true)
     {
         fmt::print("How many processors do you want to use?\n");
-        size_t p;
-        std::cin >> p;
+        size_t p = 4;
+        //std::cin >> p;
 
-        if (p > maxP)
+        if (restrictP && p > maxP)
         {
             fmt::print("Sorry, your requested {}, but only {} processors available.\n", p, maxP);
             exit(EXIT_FAILURE);
@@ -199,7 +195,7 @@ void BspBench(tEnv &env, size_t maxH, size_t maxN, size_t repetitions)
         /* Processor 0 determines minimum, maximum, average computing rate */
         if (s == 0)
         {
-            auto [mintime, maxtime] = MinMax(Time.begin(), Time.end());
+            auto [mintime, maxtime] = SyncLib::Util::MinMax(Time.begin(), Time.end());
 
             if (mintime > 0.0)
             {
@@ -286,13 +282,29 @@ void BspBench(tEnv &env, size_t maxH, size_t maxN, size_t repetitions)
 
 
 
-int main(int /*argc*/, char ** /*argv*/)
+int main(int argc, char **argv)
 {
-    SyncLib::Environments::SharedMemoryBSP env;
-    size_t p = BenchReporter::RequestP(env.MaxSize());
+    using tEnv = SyncLib::Environments::SharedMemoryBSP;
+    tEnv env;
+    size_t p;
 
-    env.Run(p, BspBench<decltype(env)>, MAXH, MAXN, NITERS);
+    {
+        Args args("bench", "Edupack benchmark for SyncLib");
+        args.AddOptions(
+        {
+            {{"p", "processors"}, "The number of processors", Option::U32(), fmt::format("{}", env.MaxSize()), fmt::format("{}", env.MaxSize()) }
+        });
+        args.Parse(argc, argv);
+        uint32_t aP = args.GetOption("processors");
+        p = aP;
+    }
+
+
+    env.Run(p, BspBench<tEnv>, MAXH, MAXN, NITERS);
+
+#ifdef _WIN32
     system("pause");
+#endif
 
     exit(EXIT_SUCCESS);
 }

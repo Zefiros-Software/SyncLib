@@ -24,70 +24,69 @@
  * @endcond
  */
 #pragma once
-#ifndef __SYNCLIB_PUT_H__
-#define __SYNCLIB_PUT_H__
+#ifndef __SYNCLIB_CONDVARBARRIER_H__
+#define __SYNCLIB_CONDVARBARRIER_H__
 
-#include <vector>
-
+#include <condition_variable>
+#include <atomic>
+#include <mutex>
 namespace SyncLib
 {
     namespace Internal
     {
-        class CommunicationBuffer
+
+        class CondVarBarrier
         {
         public:
 
-            CommunicationBuffer(size_t initialSize = 1024 * 512)
-                : mData(initialSize),
-                  mCursor(0),
-                  mSize(initialSize)
+            explicit CondVarBarrier(std::size_t count)
+                : mCurrentCon(&mConVar1),
+                  mPreviousCon(&mConVar2),
+                  mCount(count),
+                  mMax(count)
             {
             }
 
-            char *Reserve(const size_t &size)
+            void Resize(size_t count)
             {
-                if (mSize - mCursor < size)
+                mCount = count;
+                mMax = count;
+            }
+
+            void Wait()
+            {
+                std::unique_lock<std::mutex> lock(mMutex);
+
+                if (--mCount == 0)
                 {
-                    Grow(size);
+                    Reset();
                 }
-
-                char *cursor = &mData[mCursor];
-                mCursor += size;
-                return cursor;
-            }
-
-            void Clear()
-            {
-                mCursor = 0;
-            }
-
-            const char *Begin() const
-            {
-                return &mData[0];
-            }
-
-            const char *End() const
-            {
-                return &mData[mCursor];
-            }
-
-            const size_t &Size() const
-            {
-                return mCursor;
+                else
+                {
+                    mCurrentCon->wait(lock);
+                }
             }
 
         private:
 
-            std::vector<char> mData;
-            size_t mCursor;
-            size_t mPutEnd;
-            size_t mSendEnd;
-            size_t mSize;
+            std::mutex mMutex;
+            std::condition_variable mConVar1;
+            std::condition_variable mConVar2;
 
-            void Grow(size_t size)
+            std::condition_variable *mCurrentCon;
+            std::condition_variable *mPreviousCon;
+
+            size_t mCount;
+            size_t mMax;
+
+            void Reset()
             {
-                mSize = mSize * 3 / 2 + size;
-                mData.resize(mSize);
+                mCount = mMax;
+                std::condition_variable *tmpCon = mCurrentCon;
+                mCurrentCon = mPreviousCon;
+                mPreviousCon = tmpCon;
+
+                tmpCon->notify_all();
             }
         };
     }

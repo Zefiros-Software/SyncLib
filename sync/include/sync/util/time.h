@@ -24,37 +24,24 @@
  * @endcond
  */
 #pragma once
-#ifndef __SYNCLIB_THREADS_H__
-#define __SYNCLIB_THREADS_H__
+#ifndef __SYNCLIB_TIME_H__
+#define __SYNCLIB_TIME_H__
 
-#include <future>
-#ifdef _WIN32
-#include <windows.h>
-#endif
+#include <string_view>
+#include <iomanip>
+#include <sstream>
+#include <ctime>
 
 namespace SyncLib
 {
-    namespace Internal
+    namespace Util
     {
-        inline void PinThread(size_t s)
+        const std::string GetTimeString(const std::string_view &format = "%Y%m%d%H%M%S")
         {
-            int maxS = static_cast<int>(std::thread::hardware_concurrency());
-            int core = static_cast<int>(s) % maxS;
-#ifdef _WIN32
-            DWORD_PTR mask = 1;
-            mask = mask << core;
-            SetThreadAffinityMask(GetCurrentThread(), mask);
-            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
-#endif // _WIN32
-
-#if defined(__GNUC__) && !defined(__APPLE__)
-            cpu_set_t cpuset;
-            CPU_ZERO(&cpuset);
-            CPU_SET(core, &cpuset);
-
-            pthread_t currentThread = pthread_self();
-            pthread_setaffinity_np(currentThread, sizeof(cpu_set_t), &cpuset);
-#endif
+            std::time_t tt = std::time(nullptr);
+            std::stringstream ss;
+            ss << std::put_time(std::localtime(&tt), format.data());
+            return ss.str();
         }
     }
 }

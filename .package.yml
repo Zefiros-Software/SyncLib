@@ -22,6 +22,8 @@ development:
   modules:
     - name: Zefiros-Software/Defaults
       version: '@head'
+    - name: Zefiros-Software/MPI
+      version: '@head'
   public:
     libraries:
       - name: Zefiros-Software/PlotLib
@@ -34,6 +36,9 @@ development:
         version: '>=8.0.0'
       - name: Zefiros-Software/Json
         version: '^3.0.0'
+        optional: false
+      - name: Zefiros-Software/Args
+        version: '@head'
         optional: false
 settings:
   enableMPI:

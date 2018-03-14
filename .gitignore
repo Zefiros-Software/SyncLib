@@ -34,3 +34,6 @@ Makefile
 
 -- Astyle
 .astylerc
+
+-- Custom
+results/**
