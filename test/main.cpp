@@ -23,15 +23,21 @@
  *
  * @endcond
  */
+#include "sync/variables/abstractSharedVariable.h"
 #include "sync/util/ranges/range.h"
+#include "sync/util/variants.h"
 #include "sync/env/shared.h"
 
 #include "helper.h"
 
+#include "fmt/format.h"
+
 #include <stdint.h>
+#include <variant>
 #include <numeric>
 #include <thread>
 #include <tuple>
+#include "sync/buffers/sendQueue.h"
 
 //#define TEST_RANGE(type)
 
@@ -272,11 +278,41 @@ TESTABLE_MACRO(S32);                    \
 TESTABLE_MACRO(S64);                    \
 TESTABLE_MACRO(s_size_t);
 
-TEST_INTEGER_TYPES(TEST_RANGE);
-TEST_INTEGER_TYPES(TEST_RANGE_REVERSE);
-TEST_INTEGER_TYPES(TEST_RANGE_WITH_LOWER);
-TEST_INTEGER_TYPES(TEST_RANGE_WITH_LOWER_REVERSE);
-TEST_INTEGER_TYPES(TEST_STEP_RANGE);
+// TEST_INTEGER_TYPES(TEST_RANGE);
+// TEST_INTEGER_TYPES(TEST_RANGE_REVERSE);
+// TEST_INTEGER_TYPES(TEST_RANGE_WITH_LOWER);
+// TEST_INTEGER_TYPES(TEST_RANGE_WITH_LOWER_REVERSE);
+// TEST_INTEGER_TYPES(TEST_STEP_RANGE);
+
+template<typename tT>
+class SyncLibTypedTest
+    : public ::testing::Test
+{
+public:
+
+    static void SetUpTestCase()
+    {
+    }
+
+    static void TearDownTestCase()
+    {
+    }
+
+    //protected:
+
+    SyncLibTypedTest()
+        : mP(std::thread::hardware_concurrency() / 2),
+          mEnv(mP)
+    {
+    }
+
+    size_t mP;
+
+    using tType = tT;
+    using tEnv = SyncLib::Environments::SharedMemoryBSP;
+    tEnv mEnv;
+    tT mValueUnshared;
+};
 
 template<typename tT>
 void TestPutValue(size_t p)
@@ -286,15 +322,14 @@ void TestPutValue(size_t p)
     for (size_t offset : SyncLib::Ranges::Range(p))
     {
         tEnv env;
-
-        env.Run(p, [](tEnv & env, const size_t offset)
+        env.Run(p, [&](tEnv & env, const size_t offset)
         {
             size_t s = env.Rank();
             size_t p = env.Size();
 
             tT unshared = GetRandom<tT>();
-            auto shared = env.ShareValue<tT>(GetRandom<tT>());
-            auto sharedValidation = env.ShareValue<tT>(GetRandom<tT>());
+            tEnv::SharedValue<tT> shared(env, GetRandom<tT>());
+            tEnv::SharedValue<tT> sharedValidation(env, GetRandom<tT>());
 
             shared.Put((s + offset) % p, unshared);
             env.Sync();
@@ -321,8 +356,8 @@ void TestPutArrayValue(size_t p)
             size_t p = env.Size();
 
             std::vector<tT> unshared(p);
-            auto shared = env.ShareArray<tT>(p);
-            auto sharedValidation = env.ShareArray<tT>(p);
+            auto shared = tEnv::SharedArray<tT>(env, p);
+            auto sharedValidation = tEnv::SharedArray<tT>(env, p);
 
             for (auto &x : unshared)
             {
@@ -382,8 +417,8 @@ void TestPutArray(size_t p)
             size_t p = env.Size();
 
             std::vector<tT> unshared(p);
-            auto shared = env.ShareArray<tT>(p);
-            auto sharedValidation = env.ShareArray<tT>(p);
+            auto shared = tEnv::SharedArray<tT>(env, p);
+            auto sharedValidation = tEnv::SharedArray<tT>(env, p);
 
             for (auto &x : unshared)
             {
@@ -442,8 +477,8 @@ void TestGetValue(size_t p)
             size_t s = env.Rank();
             size_t p = env.Size();
 
-            auto shared = env.ShareValue<tT>(GetRandom<tT>());
-            auto sharedValidation = env.ShareValue<tT>(GetRandom<tT>());
+            auto shared = tEnv::SharedValue<tT>(env, GetRandom<tT>());
+            auto sharedValidation = tEnv::SharedValue<tT>(env, GetRandom<tT>());
             tT unshared = GetRandom<tT>();
 
             sharedValidation.Get((s + offset) % p, shared.Value());
@@ -456,28 +491,323 @@ void TestGetValue(size_t p)
     }
 }
 
-TEST(P(PutValue), uint8_t)
+template<typename tT>
+void TestGetArrayValue(size_t p)
 {
-    TestPutValue<uint8_t>(4);
+    using tEnv = SyncLib::Environments::SharedMemoryBSP;
+
+    for (size_t offset : SyncLib::Ranges::Range(p))
+    {
+        tEnv env;
+
+        env.Run(p, [](tEnv & env, const size_t offset)
+        {
+            size_t s = env.Rank();
+            size_t p = env.Size();
+
+            auto shared = tEnv::SharedArray<tT>(env, p);
+            auto sharedValidation = tEnv::SharedArray<tT>(env, p);
+            std::vector<tT> unshared(p);
+
+            for (auto &x : unshared)
+            {
+                x = GetRandom<tT>();
+            }
+
+
+            for (auto &x : shared)
+            {
+                x = GetRandom<tT>();
+            }
+
+
+            for (auto &x : sharedValidation)
+            {
+                x = GetRandom<tT>();
+            }
+
+            {
+                size_t t = (s + offset) % p;
+
+                for (size_t i : SyncLib::Ranges::Range(p))
+                {
+                    sharedValidation.GetValue(t, shared[i], i);
+                }
+            }
+
+            env.Sync();
+
+            {
+                size_t t = (s - offset + p) % p;
+
+                for (size_t i : SyncLib::Ranges::Range(p))
+                {
+                    shared.GetValue(t, unshared[i], i);
+                }
+            }
+
+            env.Sync();
+
+            EXPECT_EQ(unshared, sharedValidation.Value());
+        }, offset);
+    }
 }
 
-TEST(P(PutArrayValue), uint8_t)
+template<typename tT>
+void TestSendValueSingle(size_t p)
 {
-    TestPutArrayValue<uint8_t>(4);
+    using tEnv = SyncLib::Environments::SharedMemoryBSP;
+
+    for (size_t offset : SyncLib::Ranges::Range(p))
+    {
+        tEnv env;
+
+        env.Run(p, [](tEnv & env, const size_t offset)
+        {
+            size_t s = env.Rank();
+            size_t p = env.Size();
+
+            tT initial = GetRandom<tT>();
+            tT received = GetRandom<tT>();
+            tT receivedValidation = GetRandom<tT>();
+            tEnv::SendQueue<tT> queue(env);
+
+            queue.Send((s + offset) % p, initial);
+            env.Sync();
+
+            std::tie(received) = *queue.begin();
+            queue.Send((s - offset + p) % p, received);
+            env.Sync();
+
+            std::tie(receivedValidation) = *queue.begin();
+
+            EXPECT_EQ(initial, receivedValidation);
+        }, offset);
+    }
 }
 
-TEST(P(PutArray), uint8_t)
+template<typename tT>
+void TestSendValueAll(size_t p)
 {
-    TestPutArray<uint8_t>(4);
+    using tEnv = SyncLib::Environments::SharedMemoryBSP;
+
+    tEnv env;
+
+    env.Run(p, [](tEnv & env)
+    {
+        size_t s = env.Rank();
+        size_t p = env.Size();
+
+        std::vector<tT> initial(p);
+        std::vector<tT> received(p);
+        std::vector<tT> receivedValidation(p);
+
+        for (auto &x : initial)
+        {
+            x = GetRandom<tT>();
+        }
+
+        tEnv::SendQueue<size_t, tT> queue(env);
+
+        for (size_t t : SyncLib::Ranges::Range(p))
+        {
+            queue.Send(t, s, initial[t]);
+        }
+
+        env.Sync();
+
+        for (auto[t, rec] : queue)
+        {
+            received[t] = rec;
+        }
+
+        for (size_t t : SyncLib::Ranges::Range(p))
+        {
+            queue.Send(t, s, received[t]);
+        }
+
+        env.Sync();
+
+        for (auto[t, rec] : queue)
+        {
+            receivedValidation[t] = rec;
+        }
+
+        EXPECT_EQ(initial, receivedValidation);
+    });
 }
 
-TEST(P(GetValue), uint8_t)
+template<typename tT>
+void TestGetArray(size_t p)
 {
-    TestGetValue<uint8_t>(4);
+    using tEnv = SyncLib::Environments::SharedMemoryBSP;
+
+    for (size_t offset : SyncLib::Ranges::Range(p))
+    {
+        tEnv env;
+
+        env.Run(p, [](tEnv & env, const size_t offset)
+        {
+            size_t s = env.Rank();
+            size_t p = env.Size();
+
+            auto shared = tEnv::SharedArray<tT>(env, p);
+            auto sharedValidation = tEnv::SharedArray<tT>(env, p);
+            std::vector<tT> unshared(p);
+
+            for (auto &x : unshared)
+            {
+                x = GetRandom<tT>();
+            }
+
+
+            for (auto &x : shared)
+            {
+                x = GetRandom<tT>();
+            }
+
+
+            for (auto &x : sharedValidation)
+            {
+                x = GetRandom<tT>();
+            }
+
+            {
+                size_t t = (s + offset) % p;
+
+                for (size_t i : SyncLib::Ranges::Range(p))
+                {
+                    sharedValidation.Get(t, shared.begin() + i, shared.begin() + i + 1, i);
+                }
+            }
+
+            env.Sync();
+
+            {
+                size_t t = (s - offset + p) % p;
+
+                for (size_t i : SyncLib::Ranges::Range(p))
+                {
+                    shared.Get(t, unshared.begin() + i, unshared.begin() + i + 1, i);
+                }
+            }
+
+            env.Sync();
+
+            EXPECT_EQ(unshared, sharedValidation.Value());
+        }, offset);
+    }
 }
+
+
+
+using NumericTypes
+    =  ::testing::Types<uint8_t, uint16_t, uint32_t, uint64_t, size_t, int8_t, int16_t, int32_t, int64_t, std::make_signed_t<size_t>, float, double>;
+TYPED_TEST_CASE(SyncLibTypedTest, NumericTypes);
+
+TYPED_TEST(SyncLibTypedTest, PutValue)
+{
+    TestPutValue<typename TestFixture::tType>(TestFixture::mP);
+};
+
+TYPED_TEST(SyncLibTypedTest, GetValue)
+{
+    TestGetValue<typename TestFixture::tType>(TestFixture::mP);
+};
+
+TYPED_TEST(SyncLibTypedTest, PutArrayValue)
+{
+    TestPutArrayValue<typename TestFixture::tType>(TestFixture::mP);
+};
+
+TYPED_TEST(SyncLibTypedTest, GetArrayValue)
+{
+    TestGetArrayValue<typename TestFixture::tType>(TestFixture::mP);
+};
+
+TYPED_TEST(SyncLibTypedTest, PutArray)
+{
+    TestPutArray<typename TestFixture::tType>(TestFixture::mP);
+};
+
+TYPED_TEST(SyncLibTypedTest, GetArray)
+{
+    TestGetArray<typename TestFixture::tType>(TestFixture::mP);
+};
+
+TYPED_TEST(SyncLibTypedTest, SendValueSingle)
+{
+    TestSendValueSingle<typename TestFixture::tType>(TestFixture::mP);
+};
+
+TYPED_TEST(SyncLibTypedTest, SendValueAll)
+{
+    TestSendValueAll<typename TestFixture::tType>(TestFixture::mP);
+};
 
 int main(int argc, char *argv[])
 {
+    //     fmt::print("Size of ValueVariants: {}\n", sizeof(ValueVariants));
+    //     fmt::print("Size of VectorVariants: {}\n", sizeof(VectorVariants));
+    //     fmt::print("Size of AllVariants: {}\n", sizeof(AllVariants));
+    //     fmt::print("Size of std::vector: {}\n", sizeof(std::vector<size_t>));
+    //     fmt::print("Size of SharedValue: {}\n",
+    //                sizeof(SyncLib::Internal::SharedArray<uint64_t, SyncLib::Environments::SharedMemoryBSP>));
+    //
+    //
+    //     fmt::print("Count in ValueVariants: {}\n", std::variant_size_v<ValueVariants>);
+    //     fmt::print("Count in VectorVariants: {}\n", std::variant_size_v<VectorVariants>);
+    //     fmt::print("Count in AllVariants: {}\n", std::variant_size_v<AllVariants>);
+    //
+    //     size_t z = 1ull;
+    //     AllVariants x = z;
+    //     AllVariants y = &z;
+    //
+    //     if (std::holds_alternative<uint64_t>(x))
+    //     {
+    //         fmt::print("x holds U64 with value {}\n", std::get<uint64_t>(x));
+    //     }
+    //     else if (std::holds_alternative<uint32_t>(x))
+    //     {
+    //         fmt::print("x holds U32 with value {}\n", std::get<uint32_t>(x));
+    //     }
+    //
+    //     if (HoldsAlternative<uint64_t>(y))
+    //     {
+    //         auto &yRef = GetVariantReference<uint64_t>(y);
+    //         fmt::print("y holds U64 with value {}\n", yRef);
+    //         yRef = 2;
+    //         fmt::print("y holds U64 with value {}, original now holds {}\n", yRef, z);
+    //     }
+    //     else if (HoldsAlternative<uint32_t>(y))
+    //     {
+    //         auto &yRef = GetVariantReference<uint32_t>(y);
+    //         fmt::print("y holds U32 with value {}\n", yRef);
+    //         yRef = 2;
+    //         fmt::print("y holds U32 with value {}, original now holds {}\n", yRef, z);
+    //     }
+    //
+    //     using tEnv = SyncLib::Environments::SharedMemoryBSP;
+    //     tEnv env(2);
+    //     env.Run(2, [](tEnv & env)
+    //     {
+    //         size_t s = env.Rank();
+    //         tEnv::SendQueue<char, size_t> queue(env);
+    //         queue.Send(1 - s, static_cast<char>('a' + s), s);
+    //         queue.Send(1 - s, static_cast<char>('a' + s), s);
+    //         env.Sync();
+    //
+    //         for (auto [u, v] : queue)
+    //         {
+    //             fmt::print("s: {}, u: {}, v: {}\n", s, u, v);
+    //         }
+    //     });
+    //
+    //     fmt::print("Done\n");
+    //
+    //     system("pause");
+    //     exit(EXIT_SUCCESS);
+
     testing::InitGoogleTest(&argc, argv);
 
     int result = RUN_ALL_TESTS();

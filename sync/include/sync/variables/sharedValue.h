@@ -32,6 +32,7 @@
 #include "sync/variables/abstractSharedVariable.h"
 
 #include "sync/util/ranges/range.h"
+#include "sync/util/variants.h"
 
 namespace SyncLib
 {
@@ -50,8 +51,10 @@ namespace SyncLib
             template<typename... tArgs>
             SharedValue(tEnv &env, tArgs &&... args)
                 : tParent(env),
-                  mValue(std::forward<tArgs>(args)...)
-            {}
+                  mValueHolder(std::forward<tArgs>(args)...),
+                  mValue(GetVariantReference<tT>(mValueHolder))
+            {
+            }
 
             void Put(size_t target, const tT &value)
             {
@@ -118,7 +121,9 @@ namespace SyncLib
 
         private:
 
-            tT mValue;
+            std::variant<tT, tT *> mValueHolder;
+
+            tT &mValue;
         };
     }
 }

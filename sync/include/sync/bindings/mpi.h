@@ -255,7 +255,7 @@ namespace SyncLib
                            arma::Mat<tT> &recvBuffer, const arma::Mat<tSize> &recvCounts, const arma::Mat<tSize> &recvOffsets)
             {
                 AllToAllV<tT>(sendBuffer, arma::conv_to<arma::Mat<int>>::from(sendCounts), arma::conv_to<arma::Mat<int>>::from(sendOffsets),
-                              recvBuffer, arma::conv_to<arma::Mat<int>>::from(recvCounts), arma::conv_to<arma::Mat<int>>::from(recvOffsets))
+                              recvBuffer, arma::conv_to<arma::Mat<int>>::from(recvCounts), arma::conv_to<arma::Mat<int>>::from(recvOffsets));
             }
 
             template<typename tT, typename tSize = int>
@@ -277,7 +277,6 @@ namespace SyncLib
             template<typename tT, typename tSize = int>
             void AllToAll(const arma::Mat<tT> &sendBuffer, arma::Mat<tT> &recvBuffer, tSize count)
             {
-                using TypeHelper = SyncLib::MPI::Types<tT>;
                 AllToAll(&sendBuffer.at(0), &recvBuffer.at(0), count);
             }
 
@@ -394,7 +393,6 @@ namespace SyncLib
             template<typename tT, typename tSize = int>
             void Broadcast(const arma::Mat<tT> &buffer, tSize sender)
             {
-                using TypeHelper = SyncLib::MPI::Types<tT>;
                 Broadcast(&buffer.at(0), buffer.size(), sender);
             }
 

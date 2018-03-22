@@ -60,12 +60,30 @@ namespace SyncLib
             {
                 constexpr size_t requestSize = sizeof(DataType) +   // DataType enum
                                                sizeof(size_t) +     // index
-                                               sizeof(size_t) +     // offset
                                                sizeof(size_t) +     // size
+                                               sizeof(size_t) +     // offset
                                                sizeof(tT);          // value
 
                 char *cursor = tParent::GetTargetPutBuffer(target).Reserve(requestSize);
                 tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, sizeof(tT), offset, value);
+            }
+
+            void GetValue(size_t target, tT &destination, size_t offset = 0)
+            {
+                constexpr size_t requestSize = sizeof(DataType) +   // DataType enum
+                                               sizeof(size_t) +     // index
+                                               sizeof(size_t) +     // size
+                                               sizeof(size_t);      // offset
+
+                {
+                    char *cursor = tParent::GetTargetGetRequests(target).Reserve(requestSize);
+                    tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, sizeof(tT), offset);
+                }
+
+                {
+                    char *cursor = tParent::GetTargetGetDestinations(target).Reserve(sizeof(tT *));
+                    tParent::WriteData(cursor, &destination);
+                }
             }
 
             void BroadcastValue(const tT &value, size_t offset)
@@ -96,6 +114,26 @@ namespace SyncLib
                 tParent::WriteIter(cursor, beginIt, endIt);
             }
 
+            template<typename tDestIterator>
+            void Get(size_t target, tDestIterator beginIt, tDestIterator endIt, size_t offset)
+            {
+                size_t count = endIt - beginIt;
+                constexpr size_t requestSize = sizeof(DataType) +   // DataType enum
+                                               sizeof(size_t) +     // index
+                                               sizeof(size_t) +     // size
+                                               sizeof(size_t);      // offset
+
+                {
+                    char *cursor = tParent::GetTargetGetRequests(target).Reserve(requestSize);
+                    tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, sizeof(tT) * count, offset);
+                }
+
+                {
+                    char *cursor = tParent::GetTargetGetDestinations(target).Reserve(sizeof(tT *));
+                    tParent::WriteData(cursor, &(*beginIt));
+                }
+            }
+
             void Broadcast()
             {
                 for (size_t t : Range(tParent::mEnv.Size()))
@@ -115,6 +153,13 @@ namespace SyncLib
                 const tT *cursorT = reinterpret_cast<const tT *>(data);
 
                 std::copy_n(cursorT, count, mValues.begin() + offset);
+            }
+
+            void BufferGet(char *cursor, const size_t &offset, const size_t &size)
+            {
+                const size_t count = size / sizeof(tT);
+                tT *cursorT = reinterpret_cast<tT *>(cursor);
+                std::copy_n(mValues.begin() + offset, count, cursorT);
             }
 
             iterator begin()

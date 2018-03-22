@@ -181,6 +181,8 @@ namespace nlohmann
                 ::arma::rowvec matRow = matrix.row(row);
                 std::copy(j[row].begin(), j[row].end(), matRow.begin());
             }
+
+            return matrix;
         }
 
         static void to_json(json &j, const ::arma::mat &matrix)

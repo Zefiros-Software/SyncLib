@@ -55,6 +55,11 @@ workspace "SyncLib"
         }
 
     project "sync-test"
+        zpm.uses {
+            "Zefiros-Software/Fmt"
+        }
+
+    project "sync-test"
         zpm.uses "Zefiros-Software/Armadillo"
 
     project "mpi-pingpong"
@@ -64,6 +69,7 @@ workspace "SyncLib"
         mpi "On"
 
         links "sync"
+        -- links "stdc++fs"
 
         zpm.uses {
             "Zefiros-Software/Armadillo",
@@ -91,8 +97,6 @@ workspace "SyncLib"
         links "sync"
 
         mpi "On"
-
-        debugargs {"--timings", "../../slurm-4045658.out"}
 
         zpm.uses {
             "Zefiros-Software/Armadillo",

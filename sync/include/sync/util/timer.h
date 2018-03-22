@@ -70,37 +70,37 @@ namespace SyncLib
         };
 
         template<>
-        double Timer<std::chrono::hours>::Toc()
+        inline double Timer<std::chrono::hours>::Toc()
         {
             return std::chrono::duration_cast<std::chrono::seconds>(Now() - mTic).count() / 3600.0;
         }
 
         template<>
-        double Timer<std::chrono::minutes>::Toc()
+        inline double Timer<std::chrono::minutes>::Toc()
         {
             return std::chrono::duration_cast<std::chrono::milliseconds>(Now() - mTic).count() / 3600.0e3;
         }
 
         template<>
-        double Timer<std::chrono::seconds>::Toc()
+        inline double Timer<std::chrono::seconds>::Toc()
         {
             return std::chrono::duration_cast<std::chrono::microseconds>(Now() - mTic).count() / 1.0e6;
         }
 
         template<>
-        double Timer<std::chrono::milliseconds>::Toc()
+        inline double Timer<std::chrono::milliseconds>::Toc()
         {
             return std::chrono::duration_cast<std::chrono::nanoseconds>(Now() - mTic).count() / 1.0e6;
         }
 
         template<>
-        double Timer<std::chrono::microseconds>::Toc()
+        inline double Timer<std::chrono::microseconds>::Toc()
         {
             return std::chrono::duration_cast<std::chrono::nanoseconds>(Now() - mTic).count() / 1.0e3;
         }
 
         template<>
-        double Timer<std::chrono::nanoseconds>::Toc()
+        inline double Timer<std::chrono::nanoseconds>::Toc()
         {
             return static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(Now() - mTic).count());
         }

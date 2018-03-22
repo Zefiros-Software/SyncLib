@@ -110,6 +110,21 @@ namespace SyncLib
             }
         };
 
+        template<>
+        struct FinaliseGetHelper<true>
+        {
+            template<typename tT>
+            static size_t Finalise(const char *buffer, const char *destinations, const size_t &size)
+            {
+                const size_t count = size / sizeof(tT);
+                tT *destination = *reinterpret_cast<tT *const *>(destinations);
+                const tT *bufferT = reinterpret_cast<const tT *>(buffer);
+
+                std::copy_n(bufferT, count, destination);
+                return sizeof(tT *);
+            }
+        };
+
         template<typename tResult>
         struct RunZero
         {
@@ -142,20 +157,27 @@ namespace SyncLib
         {
         public:
 
-            template<typename tEnv>
-            friend class Internal::AbstractSharedVariable;
-            template<typename tResult>
-            friend struct Internal::RunZero;
+            template<typename... tArgs>
+            using SendQueue = SendQueue<SharedMemoryBSP, tArgs...>;
+
+            template<typename tT>
+            using SharedValue = Internal::SharedValue<tT, SharedMemoryBSP>;
+
+            template<typename tT>
+            using SharedArray = Internal::SharedArray<tT, SharedMemoryBSP>;
 
             SharedMemoryBSP(size_t size = 4)
                 : mBarrier(size),
-                  mSize(size)
+                  mSize(size),
+                  mSizePow2(Util::NextPowerOfTwo(size))
             {
             }
 
             template<typename tFunc, typename... tArgs>
             auto Run(size_t p, const tFunc &func, tArgs &&... args)
             {
+                Init(p);
+
                 auto lambda = [&](size_t s)
                 {
                     GetRank(&s);
@@ -164,63 +186,100 @@ namespace SyncLib
                     return func(*this, std::forward<tArgs>(args)...);
                 };
 
-                std::vector<std::thread> threads;
-                threads.reserve(p - 1);
-                mProcessorBuffers.clear();
-                mProcessorBuffers.resize(p);
-
-                for (auto &buffer : mProcessorBuffers)
+                for (size_t s : SyncLib::Ranges::Range<size_t>(1, mSize))
                 {
-                    for (auto &requests : buffer.requests)
-                    {
-                        requests.putBuffer.Clear();
-                        requests.getBuffer.Clear();
-                        requests.getRequests.Clear();
-                        requests.getDestinations.Clear();
-                    }
-
-                    buffer.requests.resize(p);
-                }
-
-                mBarrier.Resize(p);
-                mSize = p;
-
-                for (size_t s : SyncLib::Ranges::Range<size_t>(1, p))
-                {
-                    threads.emplace_back(lambda, s);
+                    mThreads.emplace_back(lambda, s);
                 }
 
                 using tResult = typename SyncLib::Internal::FunctionTraits<decltype(lambda)>::result::type;
 
-                return Internal::RunZero<tResult>::Run(*this, threads, lambda);
+                return Internal::RunZero<tResult>::Run(*this, mThreads, lambda);
+
             }
 
             void Sync()
             {
                 const size_t s = Rank();
 
-                mBarrier.Wait();
-
-                Util::SplitFor<size_t>(0, s, mSize, [&](size_t t)
+                for (auto queue : mProcessorBuffers[s].sendQueues)
                 {
-                    BufferGet(t, s);
-                });
-
-                mBarrier.Wait();
-
-                Util::SplitFor<size_t>(0, s, mSize, [&](size_t t)
-                {
-                    ProcessPut(t, s);
-                });
-
-                Util::SplitFor<size_t>(0, s, mSize, [&](size_t t)
-                {
-                    ProcessGet(t, s);
-                });
+                    queue->ClearReceiveBuffer();
+                }
 
                 mBarrier.Wait();
 
+                for (size_t mask = 0, t = s; mask < mSizePow2; ++mask, t = s ^ mask)
+                {
+                    if (t < mSize)
+                    {
+                        BufferGet(t, s);
+                    }
+
+                }
+
+                mBarrier.Wait();
+
+                for (size_t mask = 0, t = s; mask < mSizePow2; ++mask, t = s ^ mask)
+                {
+                    if (t < mSize)
+                    {
+                        ProcessPut(t, s);
+                        ProcessGet(t, s);
+                        ProcessSend(t, s);
+                    }
+                }
+
+                mBarrier.Wait();
+
+                for (auto queue : mProcessorBuffers[s].sendQueues)
+                {
+                    queue->ClearSendBuffers();
+                }
             }
+
+            size_t Rank()
+            {
+                return GetRank();
+            }
+
+            size_t Size()
+            {
+                return mSize;
+            }
+
+            size_t MaxSize()
+            {
+                return std::thread::hardware_concurrency();
+            }
+
+            //             template<typename tT, typename... tArgs>
+            //             auto ShareArray(tArgs &&... args)
+            //             {
+            //                 return Internal::SharedArray<tT, SharedMemoryBSP>(*this, std::forward<tArgs>(args)...);
+            //             }
+            //
+            //             template<typename tT, typename... tArgs>
+            //             auto ShareValue(tArgs &&... args)
+            //             {
+            //                 return Internal::SharedValue<tT, SharedMemoryBSP>(*this, std::forward<tArgs>(args)...);
+            //             }
+
+        private:
+
+            template<typename tEnv>
+            friend class Internal::AbstractSharedVariable;
+            template<typename tEnv>
+            friend class AbstractSendQueue;
+            template<typename tResult>
+            friend struct Internal::RunZero;
+
+            Internal::SpinBarrier mBarrier;
+            // Internal::MixedBarrier<50000> mBarrier;
+            // Internal::CondVarBarrier mBarrier;
+            size_t mSize, mSizePow2;
+
+            std::vector<Internal::ProcessorBuffers<SharedMemoryBSP>> mProcessorBuffers;
+            std::vector<std::thread> mThreads;
 
             inline void ProcessPut(const size_t &t, const size_t &s)
             {
@@ -279,8 +338,7 @@ namespace SyncLib
                     {
                         const size_t offset = *sCursor++;
                         cursor += 3 * sizeof(size_t);
-                        offset;
-                        throw;
+                        Finalise<void, Internal::BufferGetHelper<true>>(dataType ^ isArray, sharedVariable, getBuffer.Reserve(size), offset, size);
                     }
                     else
                     {
@@ -314,10 +372,10 @@ namespace SyncLib
 
                     if (isArray == Internal::DataType::Array)
                     {
-                        const size_t offset = *sCursor++;
                         cursor += 3 * sizeof(size_t);
-                        offset;
-                        throw;
+                        destinationCursor += Finalise<size_t, Internal::FinaliseGetHelper<true>>(dataType ^ isArray, bufferCursor, destinationCursor,
+                                                                                                 size);
+                        bufferCursor += size;
                     }
                     else
                     {
@@ -331,41 +389,69 @@ namespace SyncLib
                 getDestinations.Clear();
             }
 
-            size_t Rank()
+            inline void ProcessSend(const size_t &t, const size_t &s)
             {
-                return GetRank();
+                auto &sQueues = mProcessorBuffers[s].sendQueues;
+                auto &tQueues = mProcessorBuffers[t].sendQueues;
+
+                for (size_t i = 0, iEnd = sQueues.size(); i < iEnd; ++i)
+                {
+                    auto &sQueue = *sQueues[i];
+                    auto &tQueue = *tQueues[i];
+
+                    sQueue.Receive(tQueue.GetTargetCount(s), tQueue.GetTargetBuffer(s));
+                }
             }
 
-            size_t Size()
+            size_t RegisterSendQueue(AbstractSendQueue<SharedMemoryBSP> *queue)
             {
-                return mSize;
+                auto &queues = mProcessorBuffers[Rank()].sendQueues;
+                size_t size = queues.size();
+                queues.push_back(queue);
+                return size;
             }
 
-            size_t MaxSize()
+            void DisableSendQueue(size_t index)
             {
-                return std::thread::hardware_concurrency();
+                mProcessorBuffers[Rank()].sendQueues[index] = nullptr;
             }
 
-            template<typename tT, typename... tArgs>
-            Internal::SharedArray<tT, SharedMemoryBSP> ShareArray(tArgs &&... args)
+            size_t RegisterSharedVariable(Internal::AbstractSharedVariable<SharedMemoryBSP> *variable)
             {
-                return Internal::SharedArray<tT, SharedMemoryBSP>(*this, std::forward<tArgs>(args)...);
+                auto &variables = mProcessorBuffers[Rank()].variables;
+                size_t size = variables.size();
+                variables.push_back(variable);
+                return size;
             }
 
-            template<typename tT, typename... tArgs>
-            Internal::SharedValue<tT, SharedMemoryBSP> ShareValue(tArgs &&... args)
+            void DisableSharedVariable(size_t index)
             {
-                return Internal::SharedValue<tT, SharedMemoryBSP>(*this, std::forward<tArgs>(args)...);
+                mProcessorBuffers[Rank()].variables[index] = nullptr;
             }
 
-        private:
+            void Init(size_t p)
+            {
+                mThreads.reserve(p - 1);
+                mProcessorBuffers.clear();
+                mProcessorBuffers.resize(p);
 
-            Internal::SpinBarrier mBarrier;
-            // Internal::MixedBarrier<50000> mBarrier;
-            // Internal::CondVarBarrier mBarrier;
-            size_t mSize;
+                for (auto &buffer : mProcessorBuffers)
+                {
+                    for (auto &requests : buffer.requests)
+                    {
+                        requests.putBuffer.Clear();
+                        requests.getBuffer.Clear();
+                        requests.getRequests.Clear();
+                        requests.getDestinations.Clear();
+                    }
 
-            std::vector<Internal::ProcessorBuffers<SharedMemoryBSP>> mProcessorBuffers;
+                    buffer.requests.resize(p);
+                }
+
+                mBarrier.Resize(p);
+                mSize = p;
+                mSizePow2 = Util::NextPowerOfTwo(p);
+            }
 
             size_t GetRank(size_t *rank = nullptr)
             {
@@ -420,14 +506,6 @@ namespace SyncLib
                     throw;
                     break;
                 }
-            }
-
-            size_t Register(Internal::AbstractSharedVariable<SharedMemoryBSP> &sharedVariable)
-            {
-                auto &variables = mProcessorBuffers[Rank()].variables;
-                size_t index = variables.size();
-                variables.push_back(&sharedVariable);
-                return index;
             }
 
             Internal::CommunicationBuffer &GetTargetPutBuffer(size_t target)

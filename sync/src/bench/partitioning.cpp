@@ -27,10 +27,11 @@
 
 #include <algorithm>
 
-std::vector<std::vector<size_t>> SyncLib::Partitioning::MakeImprovedClusterInitialisedPartitioning(const arma::mat &distances,
-                                                                                                   size_t count /*= 0*/)
+std::vector<std::vector<arma::uword>> SyncLib::Partitioning::MakeImprovedClusterInitialisedPartitioning(
+                                       const arma::mat &distances,
+                                       arma::uword count /*= 0*/)
 {
-    size_t p = distances.n_rows;
+    arma::uword p = distances.n_rows;
 
     if (count > p)
     {
@@ -38,7 +39,7 @@ std::vector<std::vector<size_t>> SyncLib::Partitioning::MakeImprovedClusterIniti
     }
     else if (count == 0)
     {
-        count = static_cast<size_t>(std::sqrt(p));
+        count = static_cast<arma::uword>(std::sqrt(p));
 
         while ((p / count) * count != p)
         {
@@ -50,9 +51,9 @@ std::vector<std::vector<size_t>> SyncLib::Partitioning::MakeImprovedClusterIniti
 
     if (count == p)
     {
-        std::vector<std::vector<size_t>> parts(p);
+        std::vector<std::vector<arma::uword>> parts(p);
 
-        for (size_t i = 0; i < p; ++i)
+        for (arma::uword i = 0; i < p; ++i)
         {
             parts[i].push_back(i);
         }
@@ -68,21 +69,21 @@ std::vector<std::vector<size_t>> SyncLib::Partitioning::MakeImprovedClusterIniti
         TripletImprover improver(partitioning);
         improver.Improve();
 
-        std::vector<std::vector<size_t>> result(count);
+        std::vector<std::vector<arma::uword>> result(count);
         auto &parts = improver.GetParts();
 
-        for (size_t i = 0; i < count; ++i)
+        for (arma::uword i = 0; i < count; ++i)
         {
-            result[i] = arma::conv_to<std::vector<size_t>>::from(parts[i].GetSamples());
+            result[i] = arma::conv_to<std::vector<arma::uword>>::from(parts[i].GetSamples());
         }
 
         return result;
     }
     else
     {
-        std::vector<std::vector<size_t>> parts(1);
+        std::vector<std::vector<arma::uword>> parts(1);
 
-        for (size_t i = 0; i < p; ++i)
+        for (arma::uword i = 0; i < p; ++i)
         {
             parts[0].push_back(i);
         }

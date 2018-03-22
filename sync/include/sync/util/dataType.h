@@ -28,7 +28,7 @@
 #define __SYNCLIB__DATATYPE_H__
 
 #include <stdint.h>
-#include <string.h>
+#include <string>
 #include <vector>
 
 namespace SyncLib

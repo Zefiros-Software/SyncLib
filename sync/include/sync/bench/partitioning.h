@@ -62,11 +62,11 @@ namespace SyncLib
                 return arma::SizeMat(mSize, mSize);
             }
 
-            void Merge(const size_t &i, const size_t &j)
+            void Merge(const arma::uword &i, const arma::uword &j)
             {
-                const size_t m1 = mSize - 1;
+                const arma::uword m1 = mSize - 1;
 
-                for (size_t k = 0; k < mSize; ++k)
+                for (arma::uword k = 0; k < mSize; ++k)
                 {
                     mDistances(i, k) = std::max(mDistances(i, k), mDistances(j, k));
                     mDistances(k, i) = std::max(mDistances(k, i), mDistances(k, j));
@@ -87,18 +87,18 @@ namespace SyncLib
         private:
 
             arma::mat mDistances;
-            size_t mSize;
+            arma::uword mSize;
         };
 
         class Clusters
         {
         public:
 
-            Clusters(const size_t &count)
+            Clusters(const arma::uword &count)
                 : mClusters(count),
                   mSize(count)
             {
-                for (size_t c = 0; c < count; ++c)
+                for (arma::uword c = 0; c < count; ++c)
                 {
                     mClusters[c].push_back(c);
                 }
@@ -109,7 +109,7 @@ namespace SyncLib
                 return mClusters;
             }
 
-            void Merge(const size_t &i, const size_t &j)
+            void Merge(const arma::uword &i, const arma::uword &j)
             {
                 auto &cI = mClusters[i];
                 auto &cJ = mClusters[j];
@@ -122,8 +122,8 @@ namespace SyncLib
 
         private:
 
-            std::vector<std::vector<size_t>> mClusters;
-            size_t mSize;
+            std::vector<std::vector<arma::uword>> mClusters;
+            arma::uword mSize;
         };
     }
 
@@ -159,12 +159,12 @@ namespace SyncLib
             {
             }
 
-            void MakeClustering(size_t count)
+            void MakeClustering(arma::uword count)
             {
                 arma::vec diag = mClusterDistances.GetSubview().diag();
                 mClusterDistances.GetSubview().diag() *= std::numeric_limits<double>::infinity();
 
-                for (size_t m = diag.size(); m > count; --m)
+                for (arma::uword m = diag.size(); m > count; --m)
                 {
                     auto d = mClusterDistances.GetSubview();
                     auto [i, j] = Util::ArgMin(d, mClusterDistances.GetShape());
@@ -199,10 +199,10 @@ namespace SyncLib
             {
             }
 
-            void MakePartitioning(size_t)
+            void MakePartitioning(arma::uword)
             {
-                std::vector<size_t> sizes(mParts.size());
-                size_t minSize, maxSize;
+                std::vector<arma::uword> sizes(mParts.size());
+                arma::uword minSize, maxSize;
 
                 auto imbalance = std::tie(minSize, maxSize);
                 imbalance = SizeImbalance(sizes);
@@ -213,7 +213,7 @@ namespace SyncLib
                 }
             }
 
-            const std::vector<std::vector<size_t>> &GetParts() const
+            const std::vector<std::vector<arma::uword>> &GetParts() const
             {
                 return mParts;
             }
@@ -225,30 +225,31 @@ namespace SyncLib
 
         private:
 
-            std::vector<std::vector<size_t>> mParts;
+            std::vector<std::vector<arma::uword>> mParts;
             const arma::mat &mDistances;
 
-            void Rebalance(size_t maxSize)
+            void Rebalance(arma::uword maxSize)
             {
                 auto largePart = std::find_if(mParts.begin(), mParts.end(), [&](auto part)
                 {
                     return part.size() == maxSize;
                 });
-                const size_t m = largePart->size();
+                const arma::uword m = largePart->size();
 
                 auto [worstSample, wGlob, worstCost] = WorstSample(*largePart, m);
-                size_t bestAlternative = BestAlternative(wGlob, largePart - mParts.begin(), worstCost);
+                arma::uword bestAlternative = BestAlternative(wGlob, largePart - mParts.begin(), worstCost);
                 largePart->erase(largePart->begin() + worstSample);
                 mParts[bestAlternative].push_back(wGlob);
             }
 
-            std::tuple<size_t, size_t, double> WorstSample(std::vector<size_t> &largePart, const size_t m)
+            std::tuple<arma::uword, arma::uword, double> WorstSample(std::vector<arma::uword> &largePart, const arma::uword m)
             {
-                arma::uvec slicer(&largePart[0], m, false);
+                //arma::uvec slicer(&largePart[0], m, false);
+                arma::uvec slicer(largePart);
                 auto d = mDistances(slicer, slicer);
                 auto[i, j] = Util::ArgMax(d, arma::SizeMat(m, m));
-                size_t iGlob = largePart[i];
-                size_t jGlob = largePart[j];
+                arma::uword iGlob = largePart[i];
+                arma::uword jGlob = largePart[j];
 
                 arma::uvec iSlice({ iGlob });
                 arma::uvec jSlice({ jGlob });
@@ -265,13 +266,13 @@ namespace SyncLib
                 }
             }
 
-            size_t BestAlternative(size_t worstSample, size_t worstIndex, double worstCost)
+            arma::uword BestAlternative(arma::uword worstSample, arma::uword worstIndex, double worstCost)
             {
-                size_t bestAlternative = worstIndex;
+                arma::uword bestAlternative = worstIndex;
                 double bestCost = std::numeric_limits<double>::infinity();
-                const size_t maxSize = mParts[worstIndex].size() - 2;
+                const arma::uword maxSize = mParts[worstIndex].size() - 2;
 
-                for (size_t i = 0, iEnd = mParts.size(); i < iEnd; ++i)
+                for (arma::uword i = 0, iEnd = mParts.size(); i < iEnd; ++i)
                 {
                     if (i == worstIndex || mParts[i].size() > maxSize)
                     {
@@ -300,9 +301,9 @@ namespace SyncLib
                 return bestAlternative;
             }
 
-            std::tuple<size_t, size_t> SizeImbalance(std::vector<size_t> &buffer)
+            std::tuple<arma::uword, arma::uword> SizeImbalance(std::vector<arma::uword> &buffer)
             {
-                std::transform(mParts.begin(), mParts.end(), buffer.begin(), std::size<std::vector<size_t>>);
+                std::transform(mParts.begin(), mParts.end(), buffer.begin(), std::size<std::vector<arma::uword>>);
                 return Util::MinMax(buffer.begin(), buffer.end());
             }
         };
@@ -315,26 +316,26 @@ namespace SyncLib
             {
             public:
 
-                Part(const std::vector<size_t> &samples, const arma::mat &distances)
+                Part(const std::vector<arma::uword> &samples, const arma::mat &distances)
                     : mSamples(samples),
                       mShape(samples.size(), samples.size()),
                       mDistances(distances)
                 {
                     auto[i, j] = Util::ArgMax(mDistances(mSamples, mSamples), mShape);
-                    size_t iGlob = mSamples[i];
+                    arma::uword iGlob = mSamples[i];
 
                 }
 
-                void Replace(size_t index, size_t sample)
+                void Replace(arma::uword index, arma::uword sample)
                 {
                     mSamples[index] = sample;
                 }
 
-                double WorstCostAfterReplace(size_t index, size_t sample)
+                double WorstCostAfterReplace(arma::uword index, arma::uword sample)
                 {
                     double worstCost = 0;
 
-                    for (size_t i = 0, iEnd = mSamples.size(); i < iEnd; ++i)
+                    for (arma::uword i = 0, iEnd = mSamples.size(); i < iEnd; ++i)
                     {
                         if (i == index)
                         {
@@ -352,7 +353,7 @@ namespace SyncLib
                     return worstCost;
                 }
 
-                size_t Size() const
+                arma::uword Size() const
                 {
                     return mSamples.size();
                 }
@@ -363,12 +364,7 @@ namespace SyncLib
                     return mSamples;
                 }
 
-                size_t &At(size_t index)
-                {
-                    return mSamples[index];
-                }
-
-                const size_t &At(size_t index) const
+                const arma::uword &At(arma::uword index) const
                 {
                     return mSamples[index];
                 }
@@ -385,7 +381,7 @@ namespace SyncLib
                 const arma::mat &mDistances;
             };
 
-            using Candidate = std::tuple<Part *, size_t, Part *, size_t>;
+            using Candidate = std::tuple<Part *, arma::uword, Part *, arma::uword>;
 
             template<typename tPartitioning>
             TripletImprover(const tPartitioning &partitioning)
@@ -402,7 +398,7 @@ namespace SyncLib
             {
                 std::vector<Part *> parts(mParts.size());
 
-                for (size_t i = 0; i < mParts.size(); ++i)
+                for (arma::uword i = 0; i < mParts.size(); ++i)
                 {
                     parts[i] = &mParts[i];
                 }
@@ -429,13 +425,13 @@ namespace SyncLib
 
                     for (auto &part2 : mParts)
                     {
-                        for (size_t sample1 = 0, end1 = part1->Size(); sample1 < end1; ++sample1)
+                        for (arma::uword sample1 = 0, end1 = part1->Size(); sample1 < end1; ++sample1)
                         {
-                            size_t sample1Glob = part1->At(sample1);
+                            arma::uword sample1Glob = part1->At(sample1);
 
-                            for (size_t sample2 = 0, end2 = part2.Size(); sample2 < end2; ++sample2)
+                            for (arma::uword sample2 = 0, end2 = part2.Size(); sample2 < end2; ++sample2)
                             {
-                                size_t sample2Glob = part2.At(sample2);
+                                arma::uword sample2Glob = part2.At(sample2);
 
                                 if (sample2Glob == worstSampleGlob || sample2Glob == sample1Glob)
                                 {
@@ -492,20 +488,20 @@ namespace SyncLib
             arma::mat mDistances;
             std::vector<Part> mParts;
 
-            std::tuple<Part *, size_t, size_t, double> WorstSample()
+            std::tuple<Part *, arma::uword, arma::uword, double> WorstSample()
             {
                 double worstCost = 0;
-                size_t worstSample = 0;
-                size_t worstSampleGlob = 0;
+                arma::uword worstSample = 0;
+                arma::uword worstSampleGlob = 0;
                 Part *worstPart = nullptr;
 
                 for (auto &part : mParts)
                 {
                     auto slicer = part.GetSamples();
-                    size_t i, j;
+                    arma::uword i, j;
                     std::tie(i, j) = Util::ArgMax(mDistances(slicer, slicer), arma::SizeMat(slicer.size(), slicer.size()));
-                    size_t iGlob = slicer[i];
-                    size_t jGlob = slicer[j];
+                    arma::uword iGlob = slicer[i];
+                    arma::uword jGlob = slicer[j];
                     double cost = std::max(mDistances(iGlob, jGlob), mDistances(jGlob, iGlob));
 
                     if (cost > worstCost)
@@ -538,9 +534,9 @@ namespace SyncLib
             {
                 double worstCost = 0;
 
-                for (const size_t &i : part.GetSamples())
+                for (const arma::uword &i : part.GetSamples())
                 {
-                    for (const size_t &j : part.GetSamples())
+                    for (const arma::uword &j : part.GetSamples())
                     {
                         const double &cost = mDistances(i, j);
 
@@ -555,7 +551,8 @@ namespace SyncLib
             }
         };
 
-        std::vector<std::vector<size_t>> MakeImprovedClusterInitialisedPartitioning(const arma::mat &distances, size_t count = 0);
+        std::vector<std::vector<arma::uword>> MakeImprovedClusterInitialisedPartitioning(const arma::mat &distances,
+                                                                                         arma::uword count = 0);
     }
 }
 

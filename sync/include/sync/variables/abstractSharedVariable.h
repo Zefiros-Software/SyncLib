@@ -44,12 +44,12 @@ namespace SyncLib
             AbstractSharedVariable(tEnv &env)
                 : mEnv(env)
             {
-                mIndex = env.Register(*this);
+                mIndex = mEnv.RegisterSharedVariable(this);
             }
 
-            size_t GetIndex() const
+            virtual ~AbstractSharedVariable()
             {
-                return mIndex;
+                mEnv.DisableSharedVariable(mIndex);
             }
 
         protected:

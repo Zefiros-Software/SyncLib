@@ -157,7 +157,7 @@ void MPIPingPongBenchmark::Serialise(std::ostream &out /*= std::cout*/)
     else
     {
         const auto &buff = mAggregatedTimings.GetBuffer();
-        mComm.Send(0, &buff.at(0, 0), buff.size());
+        mComm.Send(0, &buff.at(0, 0), buff.size(), 0);
         ComputePairwise();
     }
 }

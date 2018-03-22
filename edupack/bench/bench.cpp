@@ -164,8 +164,8 @@ void BspBench(tEnv &env, size_t maxH, size_t maxN, size_t repetitions)
     size_t p = env.Size();
     size_t s = env.Rank();
 
-    auto Time = env.template ShareArray<double>(p);
-    auto dest = env.template ShareArray<double>(2 * maxH + p);
+    auto Time = tEnv::SharedArray<double>(env, p);
+    auto dest = tEnv::SharedArray<double>(env, 2 * maxH + p);
     std::vector<double> hTime;
 
     /**** Determine r ****/
@@ -290,9 +290,11 @@ int main(int argc, char **argv)
 
     {
         Args args("bench", "Edupack benchmark for SyncLib");
+        std::string sP = std::to_string(5);
+
         args.AddOptions(
         {
-            {{"p", "processors"}, "The number of processors", Option::U32(), fmt::format("{}", env.MaxSize()), fmt::format("{}", env.MaxSize()) }
+            {{"p", "processors"}, "The number of processors", Option::U32(), sP, sP}
         });
         args.Parse(argc, argv);
         uint32_t aP = args.GetOption("processors");

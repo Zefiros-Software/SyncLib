@@ -28,6 +28,7 @@
 #define __SYNCLIB_BUFFERS_PROCESSOR_H__
 
 #include "sync/variables/abstractSharedVariable.h"
+#include "sync/buffers/sendQueue.h"
 
 #include "sync/buffers/put.h"
 
@@ -52,6 +53,7 @@ namespace SyncLib
             };
 
             std::vector<AbstractSharedVariable<tEnv> *> variables;
+            std::vector<AbstractSendQueue<tEnv> *> sendQueues;
             std::vector<Requests> requests;
         };
     }

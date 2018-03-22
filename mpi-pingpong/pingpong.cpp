@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
         args.Parse(argc, argv);
 
         q = args.GetOption("parts");
-        outputFile = args.GetOption("output");
+        outputFile = args.GetOption("output").Get<std::string>();
     }
 
     comm.Broadcast(q, 0);

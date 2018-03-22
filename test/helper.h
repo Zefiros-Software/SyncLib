@@ -27,6 +27,7 @@
 #ifndef __SYNCLIB_HELPER_H__
 #define __SYNCLIB_HELPER_H__
 
+#include "gtest/gtest-typed-test.h"
 #include "gtest/gtest.h"
 
 #define CONCATEXT(a, b) a##b

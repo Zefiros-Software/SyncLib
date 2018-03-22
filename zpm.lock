@@ -4,19 +4,19 @@
   "private": {
     "modules": [ {
       "definition": "https://github.com/Zefiros-Software/ZefirosDefaults.git",
-      "hash": "a539f143ed71c341db0acde5e13faabdc3925e3d",
+      "hash": "307ed2723825fe315220ed5b5117d5b947894742",
       "name": "Zefiros-Software/Defaults",
       "public": {
         "libraries": [ {
           "definition": "https://github.com/Zefiros-Software/GoogleTest.git",
-          "hash": "f35fe6de3b25671099de0bf69b016eed3832dc9e",
+          "hash": "dccc2d67547a5a3a97e4f211f39df931c6fbd5d5",
           "name": "Zefiros-Software/GoogleTest",
           "repository": "https://github.com/google/googletest.git",
           "tag": "HEAD",
           "versionRequirement": "@head || ^1.0.0"
         }, {
           "definition": "https://github.com/Zefiros-Software/GoogleBenchmark.git",
-          "hash": "a9beffda0b89a6995372100456a4ad894d29b93b",
+          "hash": "e668e2a1baaa969a8e5a9220e3949e3202dea9e8",
           "name": "Zefiros-Software/GoogleBenchmark",
           "repository": "https://github.com/google/benchmark.git",
           "tag": "HEAD",
@@ -70,7 +70,7 @@
       "versionRequirement": "^4.0.0"
     }, {
       "definition": "https://github.com/Zefiros-Software/ArmadilloBuild.git",
-      "hash": "7c66dd017429d5f7a446bbbe4fc91ecb01d56a93",
+      "hash": "ed66c0b613ea65141e0b7b9355a329a254fd2eb1",
       "name": "Zefiros-Software/Armadillo",
       "optionals": {
         "libraries": [ {
@@ -83,15 +83,15 @@
       "versionRequirement": ">=8.0.0"
     }, {
       "definition": "https://github.com/Zefiros-Software/Json.git",
-      "hash": "8968adcd53951b652f9f480ad62e66dc2714b061",
+      "hash": "d2dd27dc3b8472dbaa7d66f83619b3ebcd9185fe",
       "name": "Zefiros-Software/Json",
       "repository": "https://github.com/nlohmann/json.git",
-      "tag": "v3.1.1",
-      "version": "3.1.1",
+      "tag": "v3.1.2",
+      "version": "3.1.2",
       "versionRequirement": "^3.0.0"
     }, {
       "definition": "https://github.com/Zefiros-Software/Args.git",
-      "hash": "0db4bfa15de7aba4165aee9a1c18a7f28387e3b6",
+      "hash": "55dfb31b2f7ed3dfd6893b587b7ee5ce12e29653",
       "name": "Zefiros-Software/Args",
       "public": {
         "libraries": [ {
