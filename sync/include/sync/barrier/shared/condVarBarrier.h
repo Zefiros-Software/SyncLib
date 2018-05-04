@@ -28,68 +28,63 @@
 #define __SYNCLIB_CONDVARBARRIER_H__
 
 #include <condition_variable>
-#include <atomic>
 #include <mutex>
-namespace SyncLib
+
+namespace SyncLibInternal
 {
-    namespace Internal
+
+    class CondVarBarrier
     {
-
-        class CondVarBarrier
+    public:
+        explicit CondVarBarrier(const size_t count)
+            : mCurrentCon(&mConVar1)
+            , mPreviousCon(&mConVar2)
+            , mCount(count)
+            , mMax(count)
         {
-        public:
+        }
 
-            explicit CondVarBarrier(std::size_t count)
-                : mCurrentCon(&mConVar1),
-                  mPreviousCon(&mConVar2),
-                  mCount(count),
-                  mMax(count)
+        void Resize(const size_t count)
+        {
+            mCount = count;
+            mMax = count;
+        }
+
+        void Wait()
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
+
+            if (--mCount == 0)
             {
+                Reset();
             }
-
-            void Resize(size_t count)
+            else
             {
-                mCount = count;
-                mMax = count;
+                mCurrentCon->wait(lock);
             }
+        }
 
-            void Wait()
-            {
-                std::unique_lock<std::mutex> lock(mMutex);
+    private:
+        std::mutex mMutex;
+        std::condition_variable mConVar1;
+        std::condition_variable mConVar2;
 
-                if (--mCount == 0)
-                {
-                    Reset();
-                }
-                else
-                {
-                    mCurrentCon->wait(lock);
-                }
-            }
+        std::condition_variable *mCurrentCon;
+        std::condition_variable *mPreviousCon;
 
-        private:
+        size_t mCount;
+        size_t mMax;
 
-            std::mutex mMutex;
-            std::condition_variable mConVar1;
-            std::condition_variable mConVar2;
+        void Reset()
+        {
+            mCount = mMax;
+            std::condition_variable *tmpCon = mCurrentCon;
+            mCurrentCon = mPreviousCon;
+            mPreviousCon = tmpCon;
 
-            std::condition_variable *mCurrentCon;
-            std::condition_variable *mPreviousCon;
-
-            size_t mCount;
-            size_t mMax;
-
-            void Reset()
-            {
-                mCount = mMax;
-                std::condition_variable *tmpCon = mCurrentCon;
-                mCurrentCon = mPreviousCon;
-                mPreviousCon = tmpCon;
-
-                tmpCon->notify_all();
-            }
-        };
-    }
-}
+            tmpCon->notify_all();
+        }
+    };
+} // namespace SyncLibInternal
 
 #endif

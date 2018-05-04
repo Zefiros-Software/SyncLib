@@ -27,23 +27,22 @@
 #ifndef __SYNCLIB_TIME_H__
 #define __SYNCLIB_TIME_H__
 
-#include <string_view>
+#include <ctime>
 #include <iomanip>
 #include <sstream>
-#include <ctime>
 
 namespace SyncLib
 {
     namespace Util
     {
-        const std::string GetTimeString(const std::string_view &format = "%Y%m%d%H%M%S")
+        inline std::string GetTimeString(const std::string_view &format = "%Y%m%d%H%M%S")
         {
             std::time_t tt = std::time(nullptr);
             std::stringstream ss;
             ss << std::put_time(std::localtime(&tt), format.data());
             return ss.str();
         }
-    }
-}
+    } // namespace Util
+} // namespace SyncLib
 
 #endif

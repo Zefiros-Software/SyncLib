@@ -25,16 +25,17 @@
  */
 #include "sync/bench/mpiPingpong.h"
 #include "sync/util/algorithm.h"
+#include "sync/util/timer.h"
 
 using json = nlohmann::json;
 using namespace SyncLib::Bench;
 
 MPIPingPongBenchmark::MPIPingPongBenchmark(SyncLib::MPI::Comm &comm,
-                                           size_t skip /*= 4*/,
-                                           size_t maxCount /*= 256*/,
-                                           size_t packageSize /*= 64*/,
-                                           size_t repetitions /*= 40*/,
-                                           size_t rotations /*= 4*/)
+                                           const size_t skip /*= 4*/,
+                                           const size_t maxCount /*= 256*/,
+                                           const size_t packageSize /*= 64*/,
+                                           const size_t repetitions /*= 40*/,
+                                           const size_t rotations /*= 4*/)
     : mAggregatedTimings(comm.Size(), comm.Rank(), maxCount / skip),
       mComm(comm),
       mSkip(skip),
@@ -49,32 +50,33 @@ MPIPingPongBenchmark::MPIPingPongBenchmark(SyncLib::MPI::Comm &comm,
 
 }
 
-std::tuple<double, double> MPIPingPongBenchmark::LeastSquares(size_t h0, size_t h1, size_t multiplier, const arma::rowvec &t)
+std::tuple<double, double>MPIPingPongBenchmark::LeastSquares(const size_t h0, const size_t h1, size_t multiplier,
+                                                             const arma::rowvec &t)
 {
     /* This function computes the parameters g and l of the
     linear function T(h)= g*h+l that best fits
-    the data points (h,t[h]) with h0 <= h <= h1. */
+    the data points (h,t[h]) with h0<= h<= h1. */
 
     /* Compute sums:
-    sumt  =  sum of t[h] over h0 <= h <= h1
+    sumt  =  sum of t[h] over h0<= h<= h1
     sumth =         t[h]*h
     nh    =         1
     sumh  =         h
     sumhh =         h*h */
-    double dh0 = static_cast<double>(h0);
-    double dh1 = static_cast<double>(h1);
+    const double dh0 = static_cast<double>(h0);
+    const double dh1 = static_cast<double>(h1);
 
-    double sumt = arma::sum(t);
-    double sumth = arma::dot(t, SyncLib::Util::ArmaRange(h0, h1)) * multiplier;
+    const double sumt = arma::sum(t);
+    const double sumth = arma::dot(t, SyncLib::Util::ArmaRange(h0, h1)) * multiplier;
 
-    double nh = dh1 - dh0 + 1;
-    double sumh = multiplier * (dh1 * (dh1 + 1) - (dh0 - 1) * dh0) / 2;
-    double sumhh = multiplier * multiplier * (dh1 * (dh1 + 1) * (2 * dh1 + 1) - (dh0 - 1) * dh0 * (2 * dh0 - 1)) / 6;
+    const double nh = dh1 - dh0 + 1;
+    const double sumh = multiplier * (dh1 * (dh1 + 1) - (dh0 - 1) * dh0) / 2;
+    const double sumhh = multiplier * multiplier * (dh1 * (dh1 + 1) * (2 * dh1 + 1) - (dh0 - 1) * dh0 * (2 * dh0 - 1)) / 6;
 
     /* Solve    nh*l +  sumh*g =  sumt
     sumh*l + sumhh*g =  sumth */
 
-    double a = nh / (double)sumh;    // nh <= sumh
+    const double a = nh / static_cast<double>(sumh);    // nh<= sumh
 
     /* subtract a times second eqn from first eqn to obtain g */
     double g = (sumt - a * sumth) / (sumh - a * sumhh);
@@ -87,12 +89,12 @@ std::tuple<double, double> MPIPingPongBenchmark::LeastSquares(size_t h0, size_t 
 
 void MPIPingPongBenchmark::PingPong()
 {
-    SyncLib::Util::Timer<std::chrono::microseconds> timer;
+    Util::Timer<std::chrono::microseconds>timer;
 
     size_t receive;
 
-    std::vector<size_t> sendBuff(mMaxCount * mPackageSize);
-    std::vector<size_t> recvBuff(mMaxCount * mPackageSize);
+    std::vector<size_t>sendBuff(mMaxCount * mPackageSize);
+    std::vector<size_t>recvBuff(mMaxCount * mPackageSize);
 
     TimingsCollector timingsCollector(mP, mS, mMaxCount / mSkip);
 
@@ -100,7 +102,7 @@ void MPIPingPongBenchmark::PingPong()
     {
         for (size_t mask = 1; mask < mP2; ++mask)
         {
-            size_t t = mS ^ mask;
+            const size_t t = mS ^ mask;
 
             if (t < mP)
             {
@@ -115,7 +117,7 @@ void MPIPingPongBenchmark::PingPong()
                         mComm.SendReceive(t, sendBuff.data(), count * mPackageSize, &recvBuff[0], count * mPackageSize);
                     }
 
-                    double elapsed = timer.Toc();
+                    const double elapsed = timer.Toc();
 
                     timingsCollector.AddTiming(t, count / mSkip, elapsed / mRepetitions);
                 }
@@ -162,7 +164,7 @@ void MPIPingPongBenchmark::Serialise(std::ostream &out /*= std::cout*/)
     }
 }
 
-std::tuple<arma::mat, arma::mat> MPIPingPongBenchmark::ComputePairwise()
+std::tuple<arma::mat, arma::mat>MPIPingPongBenchmark::ComputePairwise()
 {
     arma::mat G = arma::zeros(mP, mP);
     arma::mat L = arma::zeros(mP, mP);

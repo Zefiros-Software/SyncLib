@@ -105,5 +105,5 @@ std::string GenerateRandomString(bool random /*= true*/, uint32_t index /*= 0*/)
         "Anyway the wind blows."
     };
 
-    return lyrics[random ? (GetRandom< uint16_t >() % 57) : index];
+    return lyrics[random ? (GetRandom<uint16_t>() % 57) : index];
 }

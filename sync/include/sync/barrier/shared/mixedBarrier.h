@@ -27,95 +27,90 @@
 #ifndef __SYNCLIB_MIXEDBARRIER_H__
 #define __SYNCLIB_MIXEDBARRIER_H__
 
-#include <stdint.h>
-#include <assert.h>
+#include "sync/util/assert.h"
+
 #include <atomic>
 #include <chrono>
-#include <thread>
 #include <mutex>
 
-namespace SyncLib
+namespace SyncLibInternal
 {
-    namespace Internal
+    template <size_t tMaxSpin>
+    class MixedBarrier
     {
-        template<size_t tMaxSpin>
-        class MixedBarrier
+    public:
+        explicit MixedBarrier(const size_t count)
+            : mCurrentCon(&mConVar1)
+            , mPreviousCon(&mConVar2)
+            , mSpaces(count)
+            , mGeneration(0)
+            , mCount(count)
         {
-        public:
+        }
 
-            explicit MixedBarrier(size_t count)
-                : mCurrentCon(&mConVar1),
-                  mPreviousCon(&mConVar2),
-                  mCount(count),
-                  mSpaces(count),
-                  mGeneration(0)
+        void Wait()
+        {
+            const size_t myGeneration = mGeneration;
+
+            if (!--mSpaces)
             {
+                Reset();
             }
-
-            void Wait()
+            else
             {
-                const size_t myGeneration = mGeneration;
+                while (mGeneration == myGeneration)
+                {
+                    for (size_t spin = 0; spin < tMaxSpin && mGeneration == myGeneration; ++spin)
+                        ;
 
-                if (!--mSpaces)
-                {
-                    Reset();
-                }
-                else
-                {
-                    while (mGeneration == myGeneration)
+                    if (mGeneration == myGeneration)
                     {
-                        for (size_t spin = 0; spin < tMaxSpin && mGeneration == myGeneration; ++spin);
+                        std::unique_lock<std::mutex> lock(mMutex);
 
                         if (mGeneration == myGeneration)
                         {
-                            std::unique_lock<std::mutex> lock(mMutex);
-
-                            if (mGeneration == myGeneration)
-                            {
-                                using namespace std::chrono_literals;
-                                mCurrentCon->wait_for(lock, 10ns);
-                            }
+                            using namespace std::chrono_literals;
+                            mCurrentCon->wait_for(lock, 10ns);
                         }
                     }
                 }
             }
+        }
 
-            void Resize(size_t count)
-            {
-                assert(mSpaces == mCount && "Count should be equal to Spaces on resize");
+        void Resize(size_t count)
+        {
+            SyncLibInternal::Assert(mSpaces == mCount, "Count should be equal to Spaces on resize, were ({}, {})", mCount, mSpaces);
 
-                mCount = count;
-                mSpaces = count;
-                mGeneration = 0;
-            }
+            mCount = count;
+            mSpaces = count;
+            mGeneration = 0;
+        }
 
-        private:
+    private:
+        std::mutex mMutex;
+        std::condition_variable mConVar1;
+        std::condition_variable mConVar2;
 
-            std::mutex mMutex;
-            std::condition_variable mConVar1;
-            std::condition_variable mConVar2;
+        std::condition_variable *mCurrentCon;
+        std::condition_variable *mPreviousCon;
 
-            std::condition_variable *mCurrentCon;
-            std::condition_variable *mPreviousCon;
+        std::atomic_size_t mSpaces;
+        std::atomic_size_t mGeneration;
+        size_t mCount;
 
-            std::atomic_size_t mSpaces;
-            std::atomic_size_t mGeneration;
-            size_t mCount;
+        void Reset()
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
 
-            void Reset()
-            {
-                std::unique_lock<std::mutex> lock(mMutex);
+            mSpaces = mCount;
+            ++mGeneration;
+            std::condition_variable *tmpCon = mCurrentCon;
+            mCurrentCon = mPreviousCon;
+            mPreviousCon = tmpCon;
 
-                mSpaces = mCount;
-                ++mGeneration;
-                std::condition_variable *tmpCon = mCurrentCon;
-                mCurrentCon = mPreviousCon;
-                mPreviousCon = tmpCon;
-
-                tmpCon->notify_all();
-            }
-        };
-    }
-}
+            tmpCon->notify_all();
+        }
+    };
+} // namespace SyncLibInternal
 
 #endif

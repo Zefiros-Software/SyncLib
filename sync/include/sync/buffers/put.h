@@ -27,70 +27,101 @@
 #ifndef __SYNCLIB_PUT_H__
 #define __SYNCLIB_PUT_H__
 
+#include "sync/util/assert.h"
+
+#include "preproc/preproc.h"
+
 #include <vector>
 
-namespace SyncLib
+namespace SyncLibInternal
 {
-    namespace Internal
+    class CommunicationBuffer
     {
-        class CommunicationBuffer
+    public:
+        CommunicationBuffer(size_t initialSize = 1024)
+            : mData(initialSize)
+            , mCursor(0)
+            , mSize(initialSize)
         {
-        public:
+        }
 
-            CommunicationBuffer(size_t initialSize = 1024 * 512)
-                : mData(initialSize),
-                  mCursor(0),
-                  mSize(initialSize)
+        NOINLINE char *Reserve(const size_t &size)
+        {
+            if (mSize - mCursor < size)
             {
+                Grow(size);
             }
 
-            char *Reserve(const size_t &size)
-            {
-                if (mSize - mCursor < size)
-                {
-                    Grow(size);
-                }
+            char *cursor = &mData[mCursor];
+            mCursor += size;
+            return cursor;
+        }
 
-                char *cursor = &mData[mCursor];
-                mCursor += size;
-                return cursor;
+        void Clear()
+        {
+            mCursor = 0;
+        }
+
+        const char *Begin() const
+        {
+            return &mData[0];
+        }
+
+        const char *End() const
+        {
+            return Begin() + Size();
+        }
+
+        const size_t &Size() const
+        {
+            SyncLibInternal::Assert(mCursor <= mData.size(), "Cursor has written beyond the size");
+            return mCursor;
+        }
+
+    private:
+        std::vector<char> mData;
+        size_t mCursor;
+        size_t mSize;
+
+        void Grow(size_t size)
+        {
+            mSize = mSize * 3 / 2 + size;
+            mData.resize(mSize);
+            using namespace std::string_literals;
+            // printf(("New size: "s + std::to_string(mSize)).c_str());
+        }
+    };
+
+    struct DistributedCommunicationBuffer
+    {
+        DistributedCommunicationBuffer(size_t p)
+            : sendBuffers(p)
+            , sizesDisplacements(p * 4)
+            , sendDisplacements(&sizesDisplacements[0])
+            , sendSizes(&sizesDisplacements[p])
+            , receiveDisplacements(&sizesDisplacements[2 * p])
+            , receiveSizes(&sizesDisplacements[3 * p])
+        {
+        }
+
+        std::vector<CommunicationBuffer> sendBuffers;
+        CommunicationBuffer receiveBuffer;
+        std::vector<int> sizesDisplacements;
+        int *sendDisplacements;
+        int *sendSizes;
+        int *receiveDisplacements;
+        int *receiveSizes;
+
+        void ClearSendBuffers()
+        {
+            for (auto &buff : sendBuffers)
+            {
+                buff.Clear();
             }
 
-            void Clear()
-            {
-                mCursor = 0;
-            }
-
-            const char *Begin() const
-            {
-                return &mData[0];
-            }
-
-            const char *End() const
-            {
-                return &mData[mCursor];
-            }
-
-            const size_t &Size() const
-            {
-                return mCursor;
-            }
-
-        private:
-
-            std::vector<char> mData;
-            size_t mCursor;
-            size_t mPutEnd;
-            size_t mSendEnd;
-            size_t mSize;
-
-            void Grow(size_t size)
-            {
-                mSize = mSize * 3 / 2 + size;
-                mData.resize(mSize);
-            }
-        };
-    }
-}
+            std::fill(sizesDisplacements.begin(), sizesDisplacements.end(), 0);
+        }
+    };
+} // namespace SyncLibInternal
 
 #endif

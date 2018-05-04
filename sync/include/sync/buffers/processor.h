@@ -27,36 +27,31 @@
 #ifndef __SYNCLIB_BUFFERS_PROCESSOR_H__
 #define __SYNCLIB_BUFFERS_PROCESSOR_H__
 
-#include "sync/variables/abstractSharedVariable.h"
 #include "sync/buffers/sendQueue.h"
+#include "sync/variables/abstractSharedVariable.h"
 
 #include "sync/buffers/put.h"
 
 #include <vector>
 
-
-namespace SyncLib
+namespace SyncLibInternal
 {
-    namespace Internal
+    template <typename tEnv>
+    class ProcessorBuffers
     {
-        template<typename tEnv>
-        class ProcessorBuffers
+    public:
+        struct Requests
         {
-        public:
-
-            struct Requests
-            {
-                CommunicationBuffer putBuffer;
-                CommunicationBuffer getBuffer;
-                CommunicationBuffer getRequests;
-                CommunicationBuffer getDestinations;
-            };
-
-            std::vector<AbstractSharedVariable<tEnv> *> variables;
-            std::vector<AbstractSendQueue<tEnv> *> sendQueues;
-            std::vector<Requests> requests;
+            CommunicationBuffer putBuffer;
+            CommunicationBuffer getBuffer;
+            CommunicationBuffer getRequests;
+            CommunicationBuffer getDestinations;
         };
-    }
-}
+
+        std::vector<AbstractSharedVariable<tEnv> *> variables;
+        std::vector<AbstractSendQueue<tEnv> *> sendQueues;
+        std::vector<Requests> requests;
+    };
+} // namespace SyncLibInternal
 
 #endif

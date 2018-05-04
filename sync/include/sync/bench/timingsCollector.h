@@ -31,8 +31,6 @@
 
 #include <armadillo>
 
-#include <stdint.h>
-#include <string>
 #include <vector>
 
 namespace SyncLib
@@ -43,7 +41,6 @@ namespace SyncLib
         class TimingsCollector
         {
         public:
-
             TimingsCollector(size_t p, size_t s, size_t maxCount);
 
             const std::vector<double> &GetCountTimings(size_t t, size_t count) const;
@@ -54,22 +51,19 @@ namespace SyncLib
             const size_t &GetMaxCount() const;
 
         private:
-
             std::vector<std::vector<std::vector<double>>> mTimings;
-            size_t mP, mS, mMaxCount, mRotations;
+            size_t mP, mS, mMaxCount;
         };
 
         class AggregatedTimings
         {
         public:
-
             AggregatedTimings(size_t p, size_t s, size_t maxCount)
-                : mAggregated(arma::zeros(p, maxCount)),
-                  mP(p),
-                  mS(s),
-                  mMaxCount(maxCount)
+                : mAggregated(arma::zeros(p, maxCount))
+                , mP(p)
+                , mS(s)
+                , mMaxCount(maxCount)
             {
-
             }
 
             void Aggregate(const TimingsCollector &timings)
@@ -115,22 +109,22 @@ namespace SyncLib
             }
 
         private:
-
             arma::mat mAggregated;
 
             size_t mP, mS, mMaxCount;
         };
-    }
-}
+    } // namespace Bench
+} // namespace SyncLib
 
+// ReSharper disable CppInconsistentNaming
 namespace nlohmann
 {
-    template<>
+    template <>
     struct adl_serializer<arma::vec>
     {
         static ::arma::vec from_json(const json &j)
         {
-            size_t size = j.size();
+            const size_t size = j.size();
             ::arma::vec vect = ::arma::zeros(size);
 
             std::copy(j.begin(), j.end(), vect.begin());
@@ -146,12 +140,12 @@ namespace nlohmann
             }
         }
     };
-    template<>
+    template <>
     struct adl_serializer<arma::rowvec>
     {
         static ::arma::rowvec from_json(const json &j)
         {
-            size_t size = j.size();
+            const size_t size = j.size();
             ::arma::rowvec vect = ::arma::zeros(size);
 
             std::copy(j.begin(), j.end(), vect.begin());
@@ -168,12 +162,12 @@ namespace nlohmann
         }
     };
 
-    template<>
+    template <>
     struct adl_serializer<arma::mat>
     {
         static ::arma::mat from_json(const json &j)
         {
-            size_t rows = j.size();
+            const size_t rows = j.size();
             ::arma::mat matrix = ::arma::zeros(j.size(), j[0].size());
 
             for (size_t row = 0; row < rows; ++row)
@@ -194,22 +188,22 @@ namespace nlohmann
         }
     };
 
-    template<>
+    template <>
     struct adl_serializer<SyncLib::Bench::AggregatedTimings>
     {
         static SyncLib::Bench::AggregatedTimings from_json(const json &j)
         {
-            size_t s = j["source"].get<size_t>();
+            const size_t s = j["source"].get<size_t>();
             json data = j["data"];
-            size_t p = data.size();
-            size_t maxCount = data[0].size();
+            const size_t p = data.size();
+            const size_t maxCount = data[0].size();
 
             SyncLib::Bench::AggregatedTimings timings(p, s, maxCount);
             auto &buff = timings.GetBuffer();
 
             for (auto &entry : data)
             {
-                size_t t = entry["target"].get<size_t>();
+                const size_t t = entry["target"].get<size_t>();
 
                 arma::rowvec tTimings = buff.row(t);
                 const auto &entryTimings = entry["timings"];
@@ -221,12 +215,11 @@ namespace nlohmann
 
         static void to_json(json &j, const SyncLib::Bench::AggregatedTimings &timings)
         {
-            size_t p = timings.GetP();
-            size_t s = timings.GetS();
+            const size_t p = timings.GetP();
+            const size_t s = timings.GetS();
             j["source"] = timings.GetS();
             json data = json::array();
             const auto &buff = timings.GetBuffer();
-
 
             for (size_t t = 0; t < p; ++t)
             {
@@ -245,6 +238,7 @@ namespace nlohmann
             j["data"] = data;
         }
     };
-}
+} // namespace nlohmann
+// ReSharper restore CppInconsistentNaming
 
 #endif

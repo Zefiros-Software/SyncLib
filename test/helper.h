@@ -45,27 +45,28 @@
 #define TEST_FILE_DETAIL(file, suite, seperator, test, extension) file #suite #seperator #test #extension
 #define TEST_FILE(suite, test) TEST_FILE_DETAIL(TEST_FILES_DIR, suite, _, test, .bin)
 
-template< typename tT >
+template<typename tT>
 inline void ExpectEqual(const tT &t1, const tT &t2, const std::string &message = "")
 {
     EXPECT_EQ(t1, t2) << message;
 }
 
 template<>
-inline void ExpectEqual< float >(const float &f1, const float &f2, const std::string &message)
+inline void ExpectEqual<float>(const float &t1, const float &t2, const std::string &message)
 {
-    EXPECT_FLOAT_EQ(f1, f2) << message;
+    EXPECT_FLOAT_EQ(t1, t2) << message;
 }
 
 template<>
-inline void ExpectEqual< double >(const double &d1, const double &d2, const std::string &message)
+inline void ExpectEqual<double>(const double &t1, const double &t2, const std::string &message)
 {
-    EXPECT_DOUBLE_EQ(d1, d2) << message;
+    EXPECT_DOUBLE_EQ(t1, t2) << message;
 }
 
 inline void ExpectEqual(const char *c1, const char *c2, const std::string &message = "")
 {
-    std::string s1(c1), s2(c2);
+    const std::string s1(c1);
+    const std::string s2(c2);
     EXPECT_EQ(s1, s2) << message;
 }
 
@@ -77,9 +78,9 @@ typedef int8_t S8;
 typedef int16_t S16;
 typedef int32_t S32;
 typedef int64_t S64;
-typedef typename std::make_signed<size_t>::type s_size_t;
+using s_size_t = std::make_signed<size_t>::type;
 
-template< typename tT >
+template<typename tT>
 struct SizeHelper
 {
     static size_t GetSize(const tT &)
@@ -89,7 +90,7 @@ struct SizeHelper
 };
 
 template<>
-struct SizeHelper< std::string >
+struct SizeHelper<std::string>
 {
     static size_t GetSize(const std::string &str)
     {
@@ -97,7 +98,7 @@ struct SizeHelper< std::string >
     }
 };
 
-template< typename tT >
+template<typename tT>
 inline void ExpectEqual(const std::vector<tT> &t1, const std::vector<tT> &t2, const std::string &message = "")
 {
     ExpectEqual(t1.size(), t2.size(), message);
@@ -116,7 +117,7 @@ inline int GetFastRand()
     return (g_seed >> 16) & 0x7FFF;
 }
 
-template< typename tT >
+template<typename tT>
 inline tT GetRandom()
 {
     return static_cast<tT>(GetFastRand());
@@ -135,7 +136,7 @@ inline float GetRandom<float>()
 }
 
 template<>
-inline bool GetRandom< bool >()
+inline bool GetRandom<bool>()
 {
     // return with max an arbitrary number
     return (GetRandom<uint32_t>() % 2) == 1;
@@ -161,10 +162,10 @@ inline std::string GetRandom<std::string>()
     return GenerateRandomString();
 }
 
-template< typename tT, typename tSeed = uint32_t >
+template<typename tT, typename tSeed = uint32_t>
 tSeed MakeSeed(uint32_t gen)
 {
-    return static_cast<tSeed>(gen * (std::is_same< tT, std::string >::value ? 32 : sizeof(tT)));
+    return static_cast<tSeed>(gen * (std::is_same<tT, std::string>::value ? 32 : sizeof(tT)));
 }
 
 #define  PP_COMMA_DIRECT() ,

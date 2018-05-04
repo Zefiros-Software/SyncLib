@@ -27,19 +27,30 @@ development:
   public:
     libraries:
       - name: Zefiros-Software/PlotLib
-        optional: false
         version: ^2.0.0
       - name: Zefiros-Software/Fmt
         version: ^4.0.0
       - name: Zefiros-Software/Armadillo
-        optional: false
         version: '>=8.0.0'
       - name: Zefiros-Software/Json
         version: '^3.0.0'
-        optional: false
       - name: Zefiros-Software/Args
         version: '@head'
-        optional: false
+      - name: Zefiros-Software/cxxopts
+        version: '2.0.0'
+      - name: Zefiros-Software/MKL
+        version: '@head'
+        settings:
+          backend: sequential
+          # backend: tbb
+
+          # # Inherited from arma:
+          # blas95: true
+          # lapack95: true
+      - name: Zefiros-Software/Fs
+        version: '@head'
+      - name: Zefiros-Software/hwloc
+        version: '^2.0.1'
 settings:
   enableMPI:
     default: false

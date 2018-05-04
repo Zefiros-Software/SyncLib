@@ -30,77 +30,77 @@
 #include "sync/buffers/put.h"
 #include "sync/util/dataType.h"
 
-namespace SyncLib
+namespace SyncLibInternal
 {
-    namespace Internal
+    template <typename tEnv>
+    class AbstractSharedVariable
     {
-        template<typename tEnv>
-        class AbstractSharedVariable
+    public:
+        using tEnvironmentType = tEnv;
+
+        AbstractSharedVariable(tEnv &env)
+            : mEnv(env)
         {
-        public:
+            mIndex = mEnv.RegisterSharedVariable(this);
+        }
 
-            using tEnvironmentType = tEnv;
+        virtual ~AbstractSharedVariable()
+        {
+            mEnv.DisableSharedVariable(mIndex);
+        }
 
-            AbstractSharedVariable(tEnv &env)
-                : mEnv(env)
-            {
-                mIndex = mEnv.RegisterSharedVariable(this);
-            }
+    protected:
+        size_t mIndex;
+        tEnv &mEnv;
 
-            virtual ~AbstractSharedVariable()
-            {
-                mEnv.DisableSharedVariable(mIndex);
-            }
+        template <typename tT>
+        char *WriteData(char *cursor, const tT &data)
+        {
+            *reinterpret_cast<tT *>(cursor) = data;
+            return cursor + sizeof(tT);
+        }
 
-        protected:
+        template <typename tT, typename... tArgs>
+        char *WriteData(char *cursor, const tT &data, tArgs &&... args)
+        {
+            return WriteData(WriteData(cursor, data), std::forward<tArgs>(args)...);
+        }
 
-            size_t mIndex;
-            tEnv &mEnv;
+        template <typename tIterator>
+        char *WriteIter(char *cursor, tIterator beginIt, tIterator endIt)
+        {
+            using tT = typename tIterator::value_type;
 
-            template<typename tT>
-            char *WriteData(char *cursor, const tT &data)
-            {
-                *reinterpret_cast<tT *>(cursor) = data;
-                return cursor + sizeof(tT);
-            }
+            tT *cursorT = reinterpret_cast<tT *>(cursor);
+            std::copy(beginIt, endIt, cursorT);
+            return cursor + (endIt - beginIt) * sizeof(tT);
+        }
 
-            template<typename tT, typename... tArgs>
-            char *WriteData(char *cursor, const tT &data, tArgs &&...args)
-            {
-                return WriteData(WriteData(cursor, data), std::forward<tArgs>(args)...);
-            }
+        CommunicationBuffer &GetTargetPutBuffer(size_t target) const
+        {
+            return mEnv.GetTargetPutBuffer(target);
+        }
 
-            template<typename tIterator>
-            char *WriteIter(char *cursor, tIterator beginIt, tIterator endIt)
-            {
-                using tT = typename tIterator::value_type;
+        CommunicationBuffer &GetTargetGetBuffer(size_t target) const
+        {
+            return mEnv.GetTargetGetBuffer(target);
+        }
 
-                tT *cursorT = reinterpret_cast<tT *>(cursor);
-                std::copy(beginIt, endIt, cursorT);
-                return cursor + (endIt - beginIt) * sizeof(tT);
-            }
+        CommunicationBuffer &GetTargetGetRequests(size_t target) const
+        {
+            return mEnv.GetTargetGetRequests(target);
+        }
 
-            CommunicationBuffer &GetTargetPutBuffer(size_t target)
-            {
-                return mEnv.GetTargetPutBuffer(target);
-            }
+        CommunicationBuffer &GetTargetGetDestinations(size_t target) const
+        {
+            return mEnv.GetTargetGetDestinations(target);
+        }
 
-            CommunicationBuffer &GetTargetGetBuffer(size_t target)
-            {
-                return mEnv.GetTargetGetBuffer(target);
-            }
-
-            CommunicationBuffer &GetTargetGetRequests(size_t target)
-            {
-                return mEnv.GetTargetGetRequests(target);
-            }
-
-            CommunicationBuffer &GetTargetGetDestinations(size_t target)
-            {
-                return mEnv.GetTargetGetDestinations(target);
-            }
-        };
-    }
-}
+        void AddGetBufferSize(size_t target, size_t size) const
+        {
+            mEnv.AddGetBufferSize(target, size);
+        }
+    };
+} // namespace SyncLibInternal
 
 #endif

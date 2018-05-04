@@ -27,23 +27,15 @@
 #ifndef __SYNCLIB_MPIPINGPONG_H__
 #define __SYNCLIB_MPIPINGPONG_H__
 
-#include "sync/bindings/mpi.h"
-
 #include "sync/bench/timingsCollector.h"
 
-#include "sync/util/algorithm.h"
-#include "sync/util/timer.h"
+#include "sync/bindings/mpi.h"
 
 #include "nlohmann/json.hpp"
 
-#include "fmt/format.h"
-#include "fmt/ostream.h"
+#include <armadillo>
 
-#include "nlohmann/json.hpp"
-
-#include <algorithm>
 #include <iostream>
-
 
 namespace SyncLib
 {
@@ -52,13 +44,8 @@ namespace SyncLib
         class MPIPingPongBenchmark
         {
         public:
-
-            MPIPingPongBenchmark(SyncLib::MPI::Comm &comm,
-                                 size_t skip = 4,
-                                 size_t maxCount = 256,
-                                 size_t packageSize = 64,
-                                 size_t repetitions = 40,
-                                 size_t rotations = 4);
+            MPIPingPongBenchmark(SyncLib::MPI::Comm &comm, size_t skip = 4, size_t maxCount = 256, size_t packageSize = 64,
+                                 size_t repetitions = 40, size_t rotations = 4);
 
             static std::tuple<double, double> LeastSquares(size_t h0, size_t h1, size_t multiplier, const arma::rowvec &t);
             void PingPong();
@@ -69,26 +56,26 @@ namespace SyncLib
             {
                 arma::vec domain = j["domain"];
                 auto &data = j["data"];
-                size_t p = data.size();
+                const size_t p = data.size();
                 arma::mat G = arma::zeros(p, p);
                 arma::mat L = arma::zeros(p, p);
 
                 for (auto &sData : data)
                 {
-                    size_t s = sData["source"];
+                    const size_t s = sData["source"];
 
-                    for (auto &tData : sData["data"])
+                    for (auto &dataT : sData["data"])
                     {
-                        size_t t = tData["target"];
+                        const size_t t = dataT["target"];
                         {
                             if (t == s)
                             {
                                 continue;
                             }
 
-                            arma::rowvec times = tData["timings"];
+                            arma::rowvec times = dataT["timings"];
 
-                            auto[g, l] = LeastSquares(1, times.size() - 1, times[0] * 64, times);
+                            auto [g, l] = LeastSquares(1, times.size() - 1, 64, times);
 
                             G.at(s, t) = g;
                             L.at(s, t) = l;
@@ -100,7 +87,6 @@ namespace SyncLib
             }
 
         private:
-
             AggregatedTimings mAggregatedTimings;
             SyncLib::MPI::Comm &mComm;
 
@@ -108,7 +94,7 @@ namespace SyncLib
             size_t mRepetitions, mRotations;
             size_t mS, mP, mP2;
         };
-    }
-}
+    } // namespace Bench
+} // namespace SyncLib
 
 #endif

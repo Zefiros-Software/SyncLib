@@ -27,58 +27,57 @@
 #ifndef __SYNCLIB_SPINBARRIER_H__
 #define __SYNCLIB_SPINBARRIER_H__
 
-#include <stdint.h>
-#include <assert.h>
+#include "sync/util/assert.h"
+
 #include <atomic>
-#include <chrono>
-#include <thread>
 
-namespace SyncLib
+namespace SyncLibInternal
 {
-    namespace Internal
+    class SpinBarrier
     {
-        class SpinBarrier
+    public:
+        SpinBarrier(size_t count)
+            : mCount(count)
+            , mSpaces(count)
+            , mGeneration(0)
         {
-        public:
+        }
 
-            explicit SpinBarrier(size_t count)
-                : mCount(count),
-                  mSpaces(count),
-                  mGeneration(0)
+        SpinBarrier(SpinBarrier &&barrier) noexcept
+            : SpinBarrier(barrier.mCount)
+        {
+        }
+
+        void Wait()
+        {
+            const size_t myGeneration = mGeneration;
+
+            if (!--mSpaces)
             {
+                mSpaces = mCount;
+                ++mGeneration;
             }
-
-            void Wait()
+            else
             {
-                const size_t myGeneration = mGeneration;
-
-                if (!--mSpaces)
-                {
-                    mSpaces = mCount;
-                    ++mGeneration;
-                }
-                else
-                {
-                    while (mGeneration == myGeneration);
-                }
+                while (mGeneration == myGeneration)
+                    ;
             }
+        }
 
-            void Resize(size_t count)
-            {
-                assert(mSpaces == mCount && "Count should be equal to Spaces on resize");
+        void Resize(size_t count)
+        {
+            SyncLibInternal::Assert(mSpaces == mCount, "Count should be equal to Spaces on resize, were ({}, {})", mCount, mSpaces);
 
-                mCount = count;
-                mSpaces = count;
-                mGeneration = 0;
-            }
+            mCount = count;
+            mSpaces = count;
+            mGeneration = 0;
+        }
 
-        private:
-
-            size_t mCount;
-            std::atomic_size_t mSpaces;
-            std::atomic_size_t mGeneration;
-        };
-    }
-}
+    private:
+        size_t mCount;
+        std::atomic_size_t mSpaces;
+        std::atomic_size_t mGeneration;
+    };
+} // namespace SyncLibInternal
 
 #endif

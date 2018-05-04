@@ -24,12 +24,10 @@
  * @endcond
  */
 #include "sync/bench/partitioning.h"
+#include "sync/util/assert.h"
 
-#include <algorithm>
-
-std::vector<std::vector<arma::uword>> SyncLib::Partitioning::MakeImprovedClusterInitialisedPartitioning(
-                                       const arma::mat &distances,
-                                       arma::uword count /*= 0*/)
+std::vector<std::vector<arma::uword>>SyncLib::Partitioning::MakeImprovedClusterInitialisedPartitioning(
+                                       const arma::mat &distances, arma::uword count /*= 0*/)
 {
     arma::uword p = distances.n_rows;
 
@@ -47,11 +45,11 @@ std::vector<std::vector<arma::uword>> SyncLib::Partitioning::MakeImprovedCluster
         }
     }
 
-    assert((p / count) * count == p);
+    SyncLibInternal::Assert((p / count) * count == p, "count was not a divisor of p: count={}, p={}", count, p);
 
     if (count == p)
     {
-        std::vector<std::vector<arma::uword>> parts(p);
+        std::vector<std::vector<arma::uword>>parts(p);
 
         for (arma::uword i = 0; i < p; ++i)
         {
@@ -69,7 +67,7 @@ std::vector<std::vector<arma::uword>> SyncLib::Partitioning::MakeImprovedCluster
         TripletImprover improver(partitioning);
         improver.Improve();
 
-        std::vector<std::vector<arma::uword>> result(count);
+        std::vector<std::vector<arma::uword>>result(count);
         auto &parts = improver.GetParts();
 
         for (arma::uword i = 0; i < count; ++i)
@@ -81,7 +79,7 @@ std::vector<std::vector<arma::uword>> SyncLib::Partitioning::MakeImprovedCluster
     }
     else
     {
-        std::vector<std::vector<arma::uword>> parts(1);
+        std::vector<std::vector<arma::uword>>parts(1);
 
         for (arma::uword i = 0; i < p; ++i)
         {

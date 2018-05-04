@@ -28,10 +28,10 @@
 using json = ::nlohmann::json;
 
 SyncLib::Bench::TimingsCollector::TimingsCollector(size_t p, size_t s, size_t maxCount)
-    : mTimings(p, std::vector<std::vector<double>>(maxCount)),
-      mP(p),
-      mS(s),
-      mMaxCount(maxCount)
+    : mTimings(p, std::vector<std::vector<double>>(maxCount))
+    , mP(p)
+    , mS(s)
+    , mMaxCount(maxCount)
 {
 }
 

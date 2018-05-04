@@ -27,161 +27,159 @@
 #ifndef __SYNCLIB_SHAREDARRAY_H__
 #define __SYNCLIB_SHAREDARRAY_H__
 
-#include "sync/util/ranges/range.h"
-
 #include "sync/variables/abstractSharedVariable.h"
 
 #include <algorithm>
-#include <stdint.h>
 #include <vector>
 
-namespace SyncLib
+namespace SyncLibInternal
 {
-    namespace Internal
+    template <typename tT, typename tEnv>
+    class SharedArray : public AbstractSharedVariable<tEnv>
     {
-        template<typename tT, typename tEnv>
-        class SharedArray
-            : public AbstractSharedVariable<tEnv>
+    public:
+        using tParent = AbstractSharedVariable<tEnv>;
+        using iterator = typename std::vector<tT>::iterator;
+        using tDataTypeEnum = DataTypeEnum<std::vector<tT>>;
+        using tEnvironmentType = tEnv;
+
+        template <typename... tArgs>
+        SharedArray(tEnv &env, tArgs &&... args)
+            : tParent(env)
+            , mValues(std::forward<tArgs>(args)...)
         {
-        public:
+        }
 
-            using tParent = AbstractSharedVariable<tEnv>;
-            using iterator = typename std::vector<tT>::iterator;
-            using tDataTypeEnum = DataTypeEnum<std::vector<tT>>;
-            using tEnvironmentType = tEnv;
+        void PutValue(size_t target, const tT &value, size_t offset)
+        {
+            constexpr size_t requestSize = sizeof(DataType) + // DataType enum
+                                           sizeof(size_t) +   // index
+                                           sizeof(size_t) +   // size
+                                           sizeof(size_t) +   // offset
+                                           sizeof(tT);        // value
 
-            template<typename... tArgs>
-            SharedArray(tEnv &env, tArgs &&... args)
-                : tParent(env),
-                  mValues(std::forward<tArgs>(args)...)
-            {}
+            char *cursor = tParent::GetTargetPutBuffer(target).Reserve(requestSize);
+            tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, sizeof(tT), offset, value);
+        }
 
-            void PutValue(size_t target, const tT &value, size_t offset)
+        void GetValue(size_t target, tT &destination, size_t offset = 0)
+        {
+            constexpr size_t requestSize = sizeof(DataType) + // DataType enum
+                                           sizeof(size_t) +   // index
+                                           sizeof(size_t) +   // size
+                                           sizeof(size_t);    // offset
+
             {
-                constexpr size_t requestSize = sizeof(DataType) +   // DataType enum
-                                               sizeof(size_t) +     // index
-                                               sizeof(size_t) +     // size
-                                               sizeof(size_t) +     // offset
-                                               sizeof(tT);          // value
-
-                char *cursor = tParent::GetTargetPutBuffer(target).Reserve(requestSize);
-                tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, sizeof(tT), offset, value);
+                char *cursor = tParent::GetTargetGetRequests(target).Reserve(requestSize);
+                tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, sizeof(tT), offset);
             }
 
-            void GetValue(size_t target, tT &destination, size_t offset = 0)
             {
-                constexpr size_t requestSize = sizeof(DataType) +   // DataType enum
-                                               sizeof(size_t) +     // index
-                                               sizeof(size_t) +     // size
-                                               sizeof(size_t);      // offset
-
-                {
-                    char *cursor = tParent::GetTargetGetRequests(target).Reserve(requestSize);
-                    tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, sizeof(tT), offset);
-                }
-
-                {
-                    char *cursor = tParent::GetTargetGetDestinations(target).Reserve(sizeof(tT *));
-                    tParent::WriteData(cursor, &destination);
-                }
+                char *cursor = tParent::GetTargetGetDestinations(target).Reserve(sizeof(tT *));
+                tParent::WriteData(cursor, &destination);
             }
 
-            void BroadcastValue(const tT &value, size_t offset)
+            tParent::AddGetBufferSize(target, sizeof(tT));
+        }
+
+        void BroadcastValue(const tT &value, const size_t offset)
+        {
+            for (size_t target = 0, end = tParent::mEnv.Size(); target < end; ++target)
             {
-                for (size_t target : Range(tParent::mEnv.Size()))
-                {
-                    PutValue(target, value, offset);
-                }
+                PutValue(target, value, offset);
+            }
+        }
+
+        void BroadcastValue(const size_t offset)
+        {
+            BroadcastValue(mValues[offset], offset);
+        }
+
+        template <typename tIterator>
+        void Put(size_t target, tIterator beginIt, tIterator endIt, size_t offset)
+        {
+            const size_t count = endIt - beginIt;
+            size_t requestSize = sizeof(DataType) +  // DataType enum
+                                 sizeof(size_t) +    // index
+                                 sizeof(size_t) +    // offset
+                                 sizeof(size_t) +    // size
+                                 sizeof(tT) * count; // values
+
+            char *cursor = tParent::GetTargetPutBuffer(target).Reserve(requestSize);
+            cursor = tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, sizeof(tT) * count, offset);
+            tParent::WriteIter(cursor, beginIt, endIt);
+        }
+
+        template <typename tDestIterator>
+        void Get(size_t target, tDestIterator beginIt, tDestIterator endIt, size_t offset)
+        {
+            const size_t count = endIt - beginIt;
+            size_t size = sizeof(tT) * count;
+            constexpr size_t requestSize = sizeof(DataType) + // DataType enum
+                                           sizeof(size_t) +   // index
+                                           sizeof(size_t) +   // size
+                                           sizeof(size_t);    // offset
+
+            {
+                char *cursor = tParent::GetTargetGetRequests(target).Reserve(requestSize);
+                tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, size, offset);
             }
 
-            void BroadcastValue(size_t offset)
             {
-                BroadcastValue(mValues[offset], offset);
+                char *cursor = tParent::GetTargetGetDestinations(target).Reserve(sizeof(tT *));
+                tParent::WriteData(cursor, &(*beginIt));
             }
 
-            template<typename tIterator>
-            void Put(size_t target, tIterator beginIt, tIterator endIt, size_t offset)
+            tParent::AddGetBufferSize(target, size);
+        }
+
+        void Broadcast()
+        {
+            for (size_t t : Range(tParent::mEnv.Size()))
             {
-                size_t count = endIt - beginIt;
-                size_t requestSize = sizeof(DataType) +     // DataType enum
-                                     sizeof(size_t) +       // index
-                                     sizeof(size_t) +       // offset
-                                     sizeof(size_t) +       // size
-                                     sizeof(tT) * count;    // values
-
-                char *cursor = tParent::GetTargetPutBuffer(target).Reserve(requestSize);
-                cursor = tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, sizeof(tT) * count, offset);
-                tParent::WriteIter(cursor, beginIt, endIt);
+                Put(t, mValues.begin(), mValues.end(), 0);
             }
+        }
 
-            template<typename tDestIterator>
-            void Get(size_t target, tDestIterator beginIt, tDestIterator endIt, size_t offset)
-            {
-                size_t count = endIt - beginIt;
-                constexpr size_t requestSize = sizeof(DataType) +   // DataType enum
-                                               sizeof(size_t) +     // index
-                                               sizeof(size_t) +     // size
-                                               sizeof(size_t);      // offset
+        std::vector<tT> &Value()
+        {
+            return mValues;
+        }
 
-                {
-                    char *cursor = tParent::GetTargetGetRequests(target).Reserve(requestSize);
-                    tParent::WriteData(cursor, tDataTypeEnum::GetEnum(), tParent::mIndex, sizeof(tT) * count, offset);
-                }
+        void FinalisePut(const char *data, const size_t &offset, const size_t &size)
+        {
+            const size_t count = size / sizeof(tT);
+            const tT *cursorT = reinterpret_cast<const tT *>(data);
 
-                {
-                    char *cursor = tParent::GetTargetGetDestinations(target).Reserve(sizeof(tT *));
-                    tParent::WriteData(cursor, &(*beginIt));
-                }
-            }
+            std::copy_n(cursorT, count, mValues.begin() + offset);
+        }
 
-            void Broadcast()
-            {
-                for (size_t t : Range(tParent::mEnv.Size()))
-                {
-                    Put(t, mValues.begin(), mValues.end(), 0);
-                }
-            }
+        void BufferGet(char *cursor, const size_t &offset, const size_t &size)
+        {
+            const size_t count = size / sizeof(tT);
+            tT *cursorT = reinterpret_cast<tT *>(cursor);
+            tT *endCursor = std::copy_n(mValues.begin() + offset, count, cursorT);
+            Assert((endCursor - cursorT) * sizeof(tT) == size, "Written beyond reserved size");
+        }
 
-            std::vector<tT> &Value()
-            {
-                return mValues;
-            }
+        iterator begin()
+        {
+            return mValues.begin();
+        }
 
-            void FinalisePut(const char *data, const size_t &offset, const size_t &size)
-            {
-                const size_t count = size / sizeof(tT);
-                const tT *cursorT = reinterpret_cast<const tT *>(data);
+        iterator end()
+        {
+            return mValues.end();
+        }
 
-                std::copy_n(cursorT, count, mValues.begin() + offset);
-            }
+        tT &operator[](const size_t index)
+        {
+            return mValues[index];
+        }
 
-            void BufferGet(char *cursor, const size_t &offset, const size_t &size)
-            {
-                const size_t count = size / sizeof(tT);
-                tT *cursorT = reinterpret_cast<tT *>(cursor);
-                std::copy_n(mValues.begin() + offset, count, cursorT);
-            }
-
-            iterator begin()
-            {
-                return mValues.begin();
-            }
-
-            iterator end()
-            {
-                return mValues.end();
-            }
-
-            tT &operator[](size_t index)
-            {
-                return mValues[index];
-            }
-
-        private:
-
-            std::vector<tT> mValues;
-        };
-    }
-}
+    private:
+        std::vector<tT> mValues;
+    };
+} // namespace SyncLibInternal
 
 #endif

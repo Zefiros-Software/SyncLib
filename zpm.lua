@@ -25,6 +25,17 @@
 -- @endcond
 -- ]]
 
+local function useSyncLibraries()
+    zpm.uses {
+        "Zefiros-Software/Armadillo",
+        "Zefiros-Software/Args",
+        "Zefiros-Software/Json",
+        "Zefiros-Software/Fmt",
+        "Zefiros-Software/Fs",
+        "Zefiros-Software/hwloc"
+    }
+end
+
 workspace "SyncLib"
     
     zefiros.setDefaults( "sync")
@@ -46,37 +57,29 @@ workspace "SyncLib"
         cppdialect "C++17"
 
         mpi "On"
+        mpimt "On"
+        vectorextensions "avx2"
 
-        zpm.uses {
-            "Zefiros-Software/Armadillo",
-            "Zefiros-Software/Fmt",
-            "Zefiros-Software/Args",
-            "Zefiros-Software/Json"
-        }
+        useSyncLibraries()
 
     project "sync-test"
-        zpm.uses {
-            "Zefiros-Software/Fmt"
-        }
+        useSyncLibraries()
 
-    project "sync-test"
-        zpm.uses "Zefiros-Software/Armadillo"
+        mpi "On"
+        mpimt "On"
+        vectorextensions "avx2"
 
     project "mpi-pingpong"
         location("mpi-pingpong")
         kind "ConsoleApp"
 
         mpi "On"
+        mpimt "On"
+        vectorextensions "avx2"
 
         links "sync"
-        -- links "stdc++fs"
 
-        zpm.uses {
-            "Zefiros-Software/Armadillo",
-            "Zefiros-Software/Fmt",
-            "Zefiros-Software/Args",
-            "Zefiros-Software/Json"
-        }
+        useSyncLibraries()
 
         includedirs {
             "mpi-pingpong",
@@ -90,20 +93,51 @@ workspace "SyncLib"
             "mpi-pingpong/*.h"
         }
 
+    project "mat-mat"
+        location "matmat"
+        kind "ConsoleApp"
+
+        links "sync"
+
+        mpi "On"
+        mpimt "On"
+        vectorextensions "avx2"
+
+        useSyncLibraries()
+
+        includedirs {
+            "matmat",
+            "sync/include"
+        }
+
+        files {
+            "matmat/**/*.cpp",
+            "matmat/*.cpp",
+            "matmat/**/*.h",
+            "matmat/*.h"
+        }
+
+        filter "system:not windows"
+            links "pthread"
+        
+        filter {}
+
     project "edupack-bench"
         location "edupack"
         kind "ConsoleApp"
 
         links "sync"
 
+        -- debugargs { "--exit-paused" }
+
         mpi "On"
+        mpimt "On"
+        vectorextensions "avx2"
+
+        useSyncLibraries()
 
         zpm.uses {
-            "Zefiros-Software/Armadillo",
-            "Zefiros-Software/PlotLib",
-            "Zefiros-Software/Json",
-            "Zefiros-Software/Args",
-            "Zefiros-Software/Fmt"
+            "Zefiros-Software/PlotLib"
         }
 
         includedirs {

@@ -23,23 +23,20 @@
  *
  * @endcond
  */
-#include "sync/bench/partitioning.h"
 #include "sync/bench/mpiPingpong.h"
+#include "sync/bench/partitioning.h"
 
 #include "sync/util/time.h"
 
 #include "args/args.h"
 
-#include "nlohmann/json.hpp"
 #include "fmt/format.h"
 
+#include "nlohmann/json.hpp"
+
+#include "fs/fs.h"
+
 #include <armadillo>
-
-#include <experimental/filesystem>
-#include <iomanip>
-#include <ctime>
-
-namespace fs = std::experimental::filesystem;
 
 int main(int argc, char *argv[])
 {
@@ -52,10 +49,8 @@ int main(int argc, char *argv[])
     {
         Args args("bench", "MPI pingpong");
         std::string timestamp = SyncLib::Util::GetTimeString();
-        args.AddOptions(
-        {
-            { { "q", "parts" }, "Number of parts for partitioning.", Option::U32(), "0", "0" },
-            { { "o", "output"}, "Output file for timings.", Option::String(), timestamp, timestamp}
+        args.AddOptions({ { { "q", "parts" }, "Number of parts for partitioning.", Option::U32(), "0", "0" },
+            { { "o", "output" }, "Output file for timings.", Option::String(), timestamp, timestamp }
         });
         args.Parse(argc, argv);
 
@@ -73,7 +68,7 @@ int main(int argc, char *argv[])
 
         if (comm.Rank() == 0)
         {
-            fs::path results("./results");
+            const fs::path results("./results");
 
             if (!fs::exists(results))
             {
@@ -86,21 +81,8 @@ int main(int argc, char *argv[])
         bench.Serialise(out);
     }
 
-    auto [G, L] = bench.ComputePairwise();
+    auto G = std::get<0>(bench.ComputePairwise());
 
-    //     using json = nlohmann::json;
-    //     Args args("bench", "Edupack benchmark");
-    //     args.AddOptions({ { "timings", "File with timings", Option::String() } });
-    //     args.Parse(argc, argv);
-    //
-    //     nlohmann::json data;
-    //     {
-    //         namespace fs = std::experimental::filesystem;
-    //         fs::path timings(fs::absolute(args.GetOption("timings").Get<std::string>()));
-    //         std::ifstream(timings) >> data;
-    //     }
-    //     arma::mat distances, L;
-    //     std::tie(distances, L) = SyncLib::Bench::MPIPingPongBenchmark::ComputePairwise(data);
     auto parts = SyncLib::Partitioning::MakeImprovedClusterInitialisedPartitioning(G, q);
 
     if (comm.Rank() == 0)
@@ -114,7 +96,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    //system("pause");
+    // system("pause");
     comm.Barrier();
     return EXIT_SUCCESS;
 }
