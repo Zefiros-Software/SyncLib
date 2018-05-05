@@ -44,19 +44,26 @@ namespace SyncLibInternal
             hwloc_topology_init(&mTopology);
             hwloc_topology_load(mTopology);
 
+            mSocketCount = hwloc_get_nbobjs_by_type(mTopology, HWLOC_OBJ_PACKAGE);
             mCoreCount = hwloc_get_nbobjs_by_type(mTopology, HWLOC_OBJ_CORE);
             mThreadCount = hwloc_get_nbobjs_by_type(mTopology, HWLOC_OBJ_PU);
+            mCoresPerSocket = mCoreCount / mSocketCount;
             mThreadsPerCore = mThreadCount / mCoreCount;
         }
 
         void PinThread(size_t s) const
         {
             const int S = static_cast<int>(s) % mThreadCount;
-            const int coreId = S % mCoreCount;
-            const int thrId = S / mCoreCount;
 
-            hwloc_set_cpubind(mTopology, hwloc_get_obj_by_type(mTopology, HWLOC_OBJ_CORE, coreId)->children[thrId]->cpuset,
-                              HWLOC_CPUBIND_THREAD);
+            const int socketId = (S / mCoresPerSocket) % mSocketCount;
+            const int coreId = S % mCoresPerSocket;
+            const int thrId = (S / mCoresPerSocket) / mSocketCount;
+
+            hwloc_obj_t socket = hwloc_get_obj_by_type(mTopology, HWLOC_OBJ_PACKAGE, socketId);
+            hwloc_obj_t core = hwloc_get_obj_inside_cpuset_by_type(mTopology, socket->cpuset, HWLOC_OBJ_CORE, coreId);
+            hwloc_obj_t thr = core->children[thrId];
+
+            hwloc_set_cpubind(mTopology, thr->cpuset, HWLOC_CPUBIND_THREAD);
         }
 
         int GetCoreCount() const
@@ -76,7 +83,9 @@ namespace SyncLibInternal
 
     private:
         hwloc_topology_t mTopology{};
+        int mSocketCount;
         int mCoreCount;
+        int mCoresPerSocket;
         int mThreadCount;
         int mThreadsPerCore;
     };
