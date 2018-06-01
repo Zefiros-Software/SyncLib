@@ -27,28 +27,29 @@
 #ifndef __SYNCLIB_FUNCTIONTRAITS_H__
 #define __SYNCLIB_FUNCTIONTRAITS_H__
 
-namespace SyncLib
+#include <tuple>
+
+namespace SyncLibInternal
 {
-    namespace Internal
+    template <typename tFunc>
+    struct FunctionTraits : public FunctionTraits<decltype(&tFunc::operator())>
     {
-        template <typename tFunc>
-        struct FunctionTraits : public FunctionTraits<decltype(&tFunc::operator())> {};
+    };
 
-        template <typename tClass, typename tReturn, typename... tArgs>
-        struct FunctionTraits<tReturn(tClass::*)(tArgs...) const>
+    template <typename tClass, typename tReturn, typename... tArgs>
+    struct FunctionTraits<tReturn(tClass::*)(tArgs...) const>
+    {
+        struct Result
         {
-            struct result
-            {
-                using type = tReturn;
-            };
-
-            template <size_t tIndex>
-            struct arg
-            {
-                using type = typename std::tuple_element<tIndex, std::tuple<tArgs...>>::type;
-            };
+            using type = tReturn;
         };
-    }
-}
+
+        template <size_t tIndex>
+        struct Arg
+        {
+            using type = typename std::tuple_element<tIndex, std::tuple<tArgs...>>::type;
+        };
+    };
+} // namespace SyncLibInternal
 
 #endif

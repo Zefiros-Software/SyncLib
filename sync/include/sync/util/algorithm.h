@@ -27,15 +27,16 @@
 #ifndef __SYNCLIB_SPLITFOR_H__
 #define __SYNCLIB_SPLITFOR_H__
 
-#include "sync/defines.h"
+#include "preproc/preproc.h"
 
+#include <armadillo>
 
 namespace SyncLib
 {
     namespace Util
     {
-        template<typename tT, typename tFunc>
-        SYNCLIB_FORCEINLINE void SplitFor(const tT &start, const tT &split, const tT &end, const tFunc &body)
+        template <typename tT, typename tFunc>
+        FORCEINLINE void SplitFor(const tT &start, const tT &split, const tT &end, const tFunc &body)
         {
             for (tT i = split; i < end; ++i)
             {
@@ -48,7 +49,7 @@ namespace SyncLib
             }
         }
 
-        template<typename tT>
+        template <typename tT>
         tT NextPowerOfTwo(tT v)
         {
             --v;
@@ -59,7 +60,78 @@ namespace SyncLib
             v |= v >> 16;
             return ++v;
         }
-    }
-}
+
+        template <typename tT>
+        arma::Col<tT> ArmaRange(const tT &start, const tT &stop, const tT &delta)
+        {
+            return arma::regspace<arma::Col<tT>>(start, delta, stop);
+        }
+
+        template <typename tT>
+        arma::Col<tT> ArmaRange(const tT &start, const tT &stop)
+        {
+            return arma::regspace<arma::Col<tT>>(start, stop);
+        }
+
+        template <typename tIterator>
+        auto MinMax(tIterator begin, tIterator end)
+        {
+            auto minmaxtime = std::minmax_element(begin, end);
+            return std::make_tuple(*minmaxtime.second, *minmaxtime.first);
+        }
+
+        template <typename tT>
+        auto ArgMax(const arma::Mat<tT> &data)
+        {
+            auto argMax = arma::ind2sub(arma::SizeMat(data.n_rows, data.n_cols), data.index_max());
+            return std::make_tuple(argMax[0], argMax[1]);
+        }
+
+        template <typename tMat>
+        auto ArgMax(const tMat &data, const arma::SizeMat &shape)
+        {
+            auto argMax = arma::ind2sub(shape, data.index_max());
+            return std::make_tuple(argMax[0], argMax[1]);
+        }
+
+        template <typename tT>
+        auto ArgMin(const arma::Mat<tT> &data)
+        {
+            auto argMin = arma::ind2sub(arma::SizeMat(data.n_rows, data.n_cols), data.index_min());
+            return std::make_tuple(argMin[0], argMin[1]);
+        }
+
+        template <typename tMat>
+        auto ArgMin(const tMat &data, const arma::SizeMat &shape)
+        {
+            auto argMin = arma::ind2sub(shape, data.index_min());
+            return std::make_tuple(argMin[0], argMin[1]);
+        }
+
+        template <typename tDelim>
+        inline void Split(std::string_view s, tDelim delimiter, std::vector<std::string_view> &words)
+        {
+            for (size_t offset = s.find_first_not_of(delimiter), next = s.find_first_of(delimiter, offset), size = s.size(); offset < size;
+                 offset = s.find_first_not_of(delimiter, next), next = s.find_first_of(delimiter, offset))
+            {
+                words.push_back(s.substr(offset, next - offset));
+            }
+        }
+
+        template <typename tDelim>
+        inline std::vector<std::string_view> Split(std::string_view s, tDelim delimiter)
+        {
+            std::vector<std::string_view> words;
+            Split(s, delimiter, words);
+            return words;
+        }
+
+        inline std::string_view Trim(std::string_view s)
+        {
+            const std::string_view delimiter(" \t\r\n");
+            return s.substr(s.find_first_not_of(delimiter), s.find_last_not_of(delimiter) + 1);
+        }
+    } // namespace Util
+} // namespace SyncLib
 
 #endif

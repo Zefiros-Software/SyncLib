@@ -4,20 +4,19 @@
   "private": {
     "modules": [ {
       "definition": "https://github.com/Zefiros-Software/ZefirosDefaults.git",
-      "hash": "06075c936e348ee256cf5c05e449ce8d8f32054b",
+      "hash": "2a324c0a911bae32ea5aaa021452424851afc5f1",
       "name": "Zefiros-Software/Defaults",
       "public": {
         "libraries": [ {
           "definition": "https://github.com/Zefiros-Software/GoogleTest.git",
-          "hash": "a3ac2d7faa9cc6d38d69321f293925f72edf6727",
+          "hash": "278aba369c41e90e9e77a6f51443beb3692919cf",
           "name": "Zefiros-Software/GoogleTest",
           "repository": "https://github.com/google/googletest.git",
-          "tag": "release-1.8.0",
-          "version": "1.8.0",
+          "tag": "HEAD",
           "versionRequirement": "@head || ^1.0.0"
         }, {
           "definition": "https://github.com/Zefiros-Software/GoogleBenchmark.git",
-          "hash": "296ec5693e7dae47c50244a70297172fab69ccae",
+          "hash": "8986839e4ac67facb52abc7fff3d5082e854aab5",
           "name": "Zefiros-Software/GoogleBenchmark",
           "repository": "https://github.com/google/benchmark.git",
           "tag": "HEAD",
@@ -27,17 +26,24 @@
       "repository": "https://github.com/Zefiros-Software/ZefirosDefaults.git",
       "tag": "HEAD",
       "versionRequirement": "@head"
+    }, {
+      "definition": "https://github.com/Zefiros-Software/MPI.git",
+      "hash": "f7b27008d16bc236be07ec6aa7980062fa7bc2c5",
+      "name": "Zefiros-Software/MPI",
+      "repository": "https://github.com/Zefiros-Software/MPI.git",
+      "tag": "HEAD",
+      "versionRequirement": "@head"
     } ]
   },
   "public": {
     "libraries": [ {
       "definition": "https://github.com/Zefiros-Software/PlotLib.git",
-      "hash": "d22076c5d5fccfab61f4b18099a8a504e14110dc",
+      "hash": "fbc6d075a362053fe65e8b6896e8bf84218cd8dd",
       "name": "Zefiros-Software/PlotLib",
       "optionals": {
         "libraries": [ {
           "name": "Zefiros-Software/Armadillo",
-          "versionRequirement": "^7.800.0"
+          "versionRequirement": ">=7.800.0"
         } ]
       },
       "private": {
@@ -51,8 +57,8 @@
         } ]
       },
       "repository": "https://github.com/Zefiros-Software/PlotLib.git",
-      "tag": "2.0.2",
-      "version": "2.0.2",
+      "tag": "2.0.3",
+      "version": "2.0.3",
       "versionRequirement": "^2.0.0"
     }, {
       "definition": "https://github.com/Zefiros-Software/Fmt.git",
@@ -64,7 +70,7 @@
       "versionRequirement": "^4.0.0"
     }, {
       "definition": "https://github.com/Zefiros-Software/ArmadilloBuild.git",
-      "hash": "43c38c2e99952aaa99fba2c27fa0e06795de1f7c",
+      "hash": "0b407871f10e0bc8e136889c367f21b8f9348068",
       "name": "Zefiros-Software/Armadillo",
       "optionals": {
         "libraries": [ {
@@ -73,8 +79,88 @@
         } ]
       },
       "repository": "https://github.com/conradsnicta/armadillo-code.git",
-      "tag": "8.200.x",
+      "tag": "8.500.x",
       "versionRequirement": ">=8.0.0"
+    }, {
+      "definition": "https://github.com/Zefiros-Software/Json.git",
+      "hash": "d2dd27dc3b8472dbaa7d66f83619b3ebcd9185fe",
+      "name": "Zefiros-Software/Json",
+      "repository": "https://github.com/nlohmann/json.git",
+      "tag": "v3.1.2",
+      "version": "3.1.2",
+      "versionRequirement": "^3.0.0"
+    }, {
+      "definition": "https://github.com/Zefiros-Software/Args.git",
+      "hash": "55dfb31b2f7ed3dfd6893b587b7ee5ce12e29653",
+      "name": "Zefiros-Software/Args",
+      "public": {
+        "libraries": [ {
+          "definition": "https://github.com/Zefiros-Software/cxxopts.git",
+          "hash": "8893afe13cc47dd0be4f25b5ae491e652c146098",
+          "name": "Zefiros-Software/cxxopts",
+          "repository": "https://github.com/jarro2783/cxxopts.git",
+          "tag": "v2.0.0",
+          "version": "2.0.0",
+          "versionRequirement": ">=2.0.0"
+        } ]
+      },
+      "repository": "https://github.com/Zefiros-Software/Args.git",
+      "tag": "HEAD",
+      "versionRequirement": "@head"
+    }, {
+      "definition": "https://github.com/Zefiros-Software/cxxopts.git",
+      "hash": "8893afe13cc47dd0be4f25b5ae491e652c146098",
+      "name": "Zefiros-Software/cxxopts",
+      "repository": "https://github.com/jarro2783/cxxopts.git",
+      "tag": "v2.0.0",
+      "version": "2.0.0",
+      "versionRequirement": "2.0.0"
+    }, {
+      "definition": "https://github.com/Zefiros-Software/MKL.git",
+      "hash": "1b0ad49685f371144ce754d859bbad07722d4915",
+      "name": "Zefiros-Software/MKL",
+      "repository": "https://github.com/Zefiros-Software/MKL.git",
+      "settings": {
+        "backend": "sequential"
+      },
+      "tag": "HEAD",
+      "versionRequirement": "@head"
+    }, {
+      "definition": "https://github.com/Zefiros-Software/Fs.git",
+      "hash": "672021434578b0edd37274e54a43fbfc387ee655",
+      "name": "Zefiros-Software/Fs",
+      "public": {
+        "libraries": [ {
+          "definition": "https://github.com/Zefiros-Software/Preproc.git",
+          "hash": "cfc72aa91d4c64cce80ae568bd35451ca0168fd9",
+          "name": "Zefiros-Software/Preproc",
+          "public": {
+            "libraries": [ {
+              "definition": "https://github.com/Zefiros-Software/Predef.git",
+              "hash": "c8c26821b9ab850ace7bbaf0d22f347a1486ff6d",
+              "name": "Zefiros-Software/Predef",
+              "repository": "https://github.com/boostorg/predef.git",
+              "tag": "boost-1.67.0",
+              "version": "1.67.0",
+              "versionRequirement": ">1.65.0 || @head"
+            } ]
+          },
+          "repository": "https://github.com/Zefiros-Software/Preproc.git",
+          "tag": "HEAD",
+          "versionRequirement": "@head"
+        } ]
+      },
+      "repository": "https://github.com/Zefiros-Software/Fs.git",
+      "tag": "HEAD",
+      "versionRequirement": "@head"
+    }, {
+      "definition": "https://github.com/Zefiros-Software/hwloc.git",
+      "hash": "11db074045e09783f0a9a4d9fdbc2277d48b8e14",
+      "name": "Zefiros-Software/hwloc",
+      "repository": "https://github.com/open-mpi/hwloc.git",
+      "tag": "hwloc-2.0.1rc1",
+      "version": "2.0.1rc1",
+      "versionRequirement": "^2.0.1"
     } ]
   },
   "repository": "./"

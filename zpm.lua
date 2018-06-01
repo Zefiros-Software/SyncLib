@@ -24,65 +24,25 @@
 --
 -- @endcond
 -- ]]
-local gcc = premake.tools.gcc
-local api = premake.api
 
-api.register {
-    name = "gccwrapper",
-    scope = "config",
-    kind = "string",
-    allowed = {
-        "mpi"
+local function useSyncLibraries()
+    zpm.uses {
+        "Zefiros-Software/Armadillo",
+        "Zefiros-Software/Args",
+        "Zefiros-Software/Json",
+        "Zefiros-Software/Fmt",
+        "Zefiros-Software/Fs",
+        "Zefiros-Software/hwloc"
     }
-}
-
-gcc.wrappers = {
-    mpi = {
-        cc = "mpicc",
-        cxx = "mpicxx"
-    }
-}
-
-premake.override(gcc, "gettoolname", function(base, cfg, tool)
-    local wrapper = cfg.gccwrapper
-    if wrapper and gcc.wrappers[wrapper] and gcc.wrappers[wrapper][tool] then
-        return gcc.wrappers[wrapper][tool]
-    else
-        return base(cfg, tool)
-    end
-end)
-
-local function linkMPI()
-    if os.istarget("windows") then
-        local mpi = os.getenv("I_MPI_ROOT")
-
-        if mpi == nil then
-            mpi = os.findlib("impi")
-
-            if mpi ~= nil then
-                mpi = mpi .. "../.."
-            end
-        end
-
-        if mpi ~= nil then
-            libdirs { mpi .. "/intel64/lib" }
-            links "impi"
-            includedirs { mpi .. "/intel64/include"}
-        end
-    else
-        gccwrapper "mpi"
-    end
 end
 
 workspace "SyncLib"
     
-    zefiros.setDefaults( "sync", {
-        mayLink = false
-    } )
+    zefiros.setDefaults( "sync")
 
     cppdialect "C++17"
 
-    -- defines "SYNCLIB_ENABLE_MPI"
+    defines "SYNCLIB_ENABLE_MPI"
 
     filter "system:windows"
         defines {
@@ -96,41 +56,88 @@ workspace "SyncLib"
         kind "StaticLib"
         cppdialect "C++17"
 
-    -- project "mpi-pingpong"
-    --     location("mpi-pingpong")
-    --     kind "ConsoleApp"
+        mpi "On"
+        mpimt "On"
+        vectorextensions "avx2"
 
-    --     linkMPI()
+        useSyncLibraries()
 
-    --     zpm.uses {
-    --         "Zefiros-Software/Fmt"
-    --     }
+    project "sync-test"
+        useSyncLibraries()
 
-    --     includedirs {
-    --         "mpi-pingpong",
-    --         "sync/include"
-    --     }
+        mpi "On"
+        mpimt "On"
+        vectorextensions "avx2"
 
-    --     files {
-    --         "mpi-pingpong/**/*.cpp",
-    --         "mpi-pingpong/*.cpp",
-    --         "mpi-pingpong/**/*.h",
-    --         "mpi-pingpong/*.h"
-    --     }
+    project "mpi-pingpong"
+        location("mpi-pingpong")
+        kind "ConsoleApp"
 
-    project "edupack-bench"
-        location("edupack")
+        mpi "On"
+        mpimt "On"
+        vectorextensions "avx2"
+
+        links "sync"
+
+        useSyncLibraries()
+
+        includedirs {
+            "mpi-pingpong",
+            "sync/include"
+        }
+
+        files {
+            "mpi-pingpong/**/*.cpp",
+            "mpi-pingpong/*.cpp",
+            "mpi-pingpong/**/*.h",
+            "mpi-pingpong/*.h"
+        }
+
+    project "mat-mat"
+        location "matmat"
         kind "ConsoleApp"
 
         links "sync"
 
+        mpi "On"
+        mpimt "On"
+        vectorextensions "avx2"
+
+        useSyncLibraries()
+
+        includedirs {
+            "matmat",
+            "sync/include"
+        }
+
+        files {
+            "matmat/**/*.cpp",
+            "matmat/*.cpp",
+            "matmat/**/*.h",
+            "matmat/*.h"
+        }
+
         filter "system:not windows"
             links "pthread"
+        
+        filter {}
+
+    project "edupack-bench"
+        location "edupack"
+        kind "ConsoleApp"
+
+        links "sync"
+
+        -- debugargs { "--exit-paused" }
+
+        mpi "On"
+        mpimt "On"
+        vectorextensions "avx2"
+
+        useSyncLibraries()
 
         zpm.uses {
-            "Zefiros-Software/Armadillo",
-            "Zefiros-Software/PlotLib",
-            "Zefiros-Software/Fmt"
+            "Zefiros-Software/PlotLib"
         }
 
         includedirs {
@@ -144,3 +151,8 @@ workspace "SyncLib"
             "edupack/bench/**/*.h",
             "edupack/bench/*.h"
         }
+
+        filter "system:not windows"
+            links "pthread"
+        
+        filter {}

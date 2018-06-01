@@ -1,8 +1,7 @@
-extensions: .h .cpp .cc .hpp
 /**
  * @cond ___LICENSE___
  *
- * Copyright (c) %CurrentYear% Zefiros Software.
+ * Copyright (c) 2016-2018 Zefiros Software.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,5 +22,22 @@ extensions: .h .cpp .cc .hpp
  * THE SOFTWARE.
  *
  * @endcond
- *
  */
+#pragma once
+#ifndef __SYNC_SYNC_H__
+#define __SYNC_SYNC_H__
+
+#include "sync/env/backend/mpi.h"
+#include "sync/env/backend/shared.h"
+#include "sync/env/base.h"
+
+namespace SyncLib
+{
+    namespace Environments
+    {
+        using SharedMemoryBSP = BaseBSP<SyncLibInternal::SharedMemoryBackend>;
+        using DistributedBSP = BaseBSP<SyncLibInternal::MPIBackend>;
+    } // namespace Environments
+} // namespace SyncLib
+
+#endif

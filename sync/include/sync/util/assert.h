@@ -24,34 +24,41 @@
  * @endcond
  */
 #pragma once
-#ifndef __SYNCLIB_BUFFERS_PROCESSOR_H__
-#define __SYNCLIB_BUFFERS_PROCESSOR_H__
+#ifndef __SYNCLIB_ASSERT_H__
+#define __SYNCLIB_ASSERT_H__
 
-#include "sync/buffers/sendQueue.h"
-#include "sync/variables/abstractSharedVariable.h"
+#include "preproc/preproc.h"
 
-#include "sync/buffers/put.h"
-
-#include <vector>
+#include <cassert>
+#include <iostream>
+#include <string>
 
 namespace SyncLibInternal
 {
-    template <typename tEnv>
-    class ProcessorBuffers
-    {
-    public:
-        struct Requests
-        {
-            CommunicationBuffer putBuffer;
-            CommunicationBuffer getBuffer;
-            CommunicationBuffer getRequests;
-            CommunicationBuffer getDestinations;
-        };
 
-        std::vector<AbstractSharedVariable<tEnv> *> variables;
-        std::vector<AbstractSendQueue<tEnv> *> sendQueues;
-        std::vector<Requests> requests;
-    };
+#if defined(_DEBUG) || !defined(NDEBUG) || defined(SYNCLIB_STRICT_ASSERT)
+    template <typename tT, typename... tArgs>
+    FORCEINLINE void Assert(const tT &condition, tArgs &&... args)
+    {
+        if (!condition)
+        {
+            auto msg = fmt::format(std::forward<tArgs>(args)...);
+            std::cout << msg << std::endl;
+
+#if !defined(_DEBUG) || defined(NDEBUG)
+            throw std::runtime_error(msg);
+#endif
+        }
+
+        assert(condition);
+    }
+#else
+    template <typename tT, typename... tArgs>
+    FORCEINLINE void Assert(const tT &, tArgs &&...)
+    {
+    }
+#endif
+
 } // namespace SyncLibInternal
 
 #endif

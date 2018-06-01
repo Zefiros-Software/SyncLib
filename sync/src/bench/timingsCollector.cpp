@@ -23,35 +23,39 @@
  *
  * @endcond
  */
-#pragma once
-#ifndef __SYNCLIB_BUFFERS_PROCESSOR_H__
-#define __SYNCLIB_BUFFERS_PROCESSOR_H__
+#include "sync/bench/timingsCollector.h"
 
-#include "sync/buffers/sendQueue.h"
-#include "sync/variables/abstractSharedVariable.h"
+using json = ::nlohmann::json;
 
-#include "sync/buffers/put.h"
-
-#include <vector>
-
-namespace SyncLibInternal
+SyncLib::Bench::TimingsCollector::TimingsCollector(size_t p, size_t s, size_t maxCount)
+    : mTimings(p, std::vector<std::vector<double>>(maxCount))
+    , mP(p)
+    , mS(s)
+    , mMaxCount(maxCount)
 {
-    template <typename tEnv>
-    class ProcessorBuffers
-    {
-    public:
-        struct Requests
-        {
-            CommunicationBuffer putBuffer;
-            CommunicationBuffer getBuffer;
-            CommunicationBuffer getRequests;
-            CommunicationBuffer getDestinations;
-        };
+}
 
-        std::vector<AbstractSharedVariable<tEnv> *> variables;
-        std::vector<AbstractSendQueue<tEnv> *> sendQueues;
-        std::vector<Requests> requests;
-    };
-} // namespace SyncLibInternal
+const std::vector<double> &SyncLib::Bench::TimingsCollector::GetCountTimings(size_t t, size_t count) const
+{
+    return mTimings[t][count - 1];
+}
 
-#endif
+void SyncLib::Bench::TimingsCollector::AddTiming(size_t t, size_t count, double timing)
+{
+    mTimings[t][count - 1].push_back(timing);
+}
+
+const size_t &SyncLib::Bench::TimingsCollector::GetP() const
+{
+    return mP;
+}
+
+const size_t &SyncLib::Bench::TimingsCollector::GetS() const
+{
+    return mS;
+}
+
+const size_t &SyncLib::Bench::TimingsCollector::GetMaxCount() const
+{
+    return mMaxCount;
+}

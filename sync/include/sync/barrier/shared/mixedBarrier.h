@@ -24,27 +24,27 @@
  * @endcond
  */
 #pragma once
-#ifndef __SYNCLIB_SPINBARRIER_H__
-#define __SYNCLIB_SPINBARRIER_H__
+#ifndef __SYNCLIB_MIXEDBARRIER_H__
+#define __SYNCLIB_MIXEDBARRIER_H__
 
 #include "sync/util/assert.h"
 
 #include <atomic>
+#include <chrono>
+#include <mutex>
 
 namespace SyncLibInternal
 {
-    class SpinBarrier
+    template <size_t tMaxSpin>
+    class MixedBarrier
     {
     public:
-        SpinBarrier(size_t count)
-            : mCount(count)
+        explicit MixedBarrier(const size_t count)
+            : mCurrentCon(&mConVar1)
+            , mPreviousCon(&mConVar2)
             , mSpaces(count)
             , mGeneration(0)
-        {
-        }
-
-        SpinBarrier(SpinBarrier &&barrier) noexcept
-            : SpinBarrier(barrier.mCount)
+            , mCount(count)
         {
         }
 
@@ -54,13 +54,26 @@ namespace SyncLibInternal
 
             if (!--mSpaces)
             {
-                mSpaces = mCount;
-                ++mGeneration;
+                Reset();
             }
             else
             {
                 while (mGeneration == myGeneration)
-                    ;
+                {
+                    for (size_t spin = 0; spin < tMaxSpin && mGeneration == myGeneration; ++spin)
+                        ;
+
+                    if (mGeneration == myGeneration)
+                    {
+                        std::unique_lock<std::mutex> lock(mMutex);
+
+                        if (mGeneration == myGeneration)
+                        {
+                            using namespace std::chrono_literals;
+                            mCurrentCon->wait_for(lock, 10ns);
+                        }
+                    }
+                }
             }
         }
 
@@ -74,9 +87,29 @@ namespace SyncLibInternal
         }
 
     private:
-        size_t mCount;
+        std::mutex mMutex;
+        std::condition_variable mConVar1;
+        std::condition_variable mConVar2;
+
+        std::condition_variable *mCurrentCon;
+        std::condition_variable *mPreviousCon;
+
         std::atomic_size_t mSpaces;
         std::atomic_size_t mGeneration;
+        size_t mCount;
+
+        void Reset()
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
+
+            mSpaces = mCount;
+            ++mGeneration;
+            std::condition_variable *tmpCon = mCurrentCon;
+            mCurrentCon = mPreviousCon;
+            mPreviousCon = tmpCon;
+
+            tmpCon->notify_all();
+        }
     };
 } // namespace SyncLibInternal
 

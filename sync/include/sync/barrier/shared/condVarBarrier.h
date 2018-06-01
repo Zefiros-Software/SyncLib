@@ -24,33 +24,66 @@
  * @endcond
  */
 #pragma once
-#ifndef __SYNCLIB_BUFFERS_PROCESSOR_H__
-#define __SYNCLIB_BUFFERS_PROCESSOR_H__
+#ifndef __SYNCLIB_CONDVARBARRIER_H__
+#define __SYNCLIB_CONDVARBARRIER_H__
 
-#include "sync/buffers/sendQueue.h"
-#include "sync/variables/abstractSharedVariable.h"
-
-#include "sync/buffers/put.h"
-
-#include <vector>
+#include <condition_variable>
+#include <mutex>
 
 namespace SyncLibInternal
 {
-    template <typename tEnv>
-    class ProcessorBuffers
+
+    class CondVarBarrier
     {
     public:
-        struct Requests
+        explicit CondVarBarrier(const size_t count)
+            : mCurrentCon(&mConVar1)
+            , mPreviousCon(&mConVar2)
+            , mCount(count)
+            , mMax(count)
         {
-            CommunicationBuffer putBuffer;
-            CommunicationBuffer getBuffer;
-            CommunicationBuffer getRequests;
-            CommunicationBuffer getDestinations;
-        };
+        }
 
-        std::vector<AbstractSharedVariable<tEnv> *> variables;
-        std::vector<AbstractSendQueue<tEnv> *> sendQueues;
-        std::vector<Requests> requests;
+        void Resize(const size_t count)
+        {
+            mCount = count;
+            mMax = count;
+        }
+
+        void Wait()
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
+
+            if (--mCount == 0)
+            {
+                Reset();
+            }
+            else
+            {
+                mCurrentCon->wait(lock);
+            }
+        }
+
+    private:
+        std::mutex mMutex;
+        std::condition_variable mConVar1;
+        std::condition_variable mConVar2;
+
+        std::condition_variable *mCurrentCon;
+        std::condition_variable *mPreviousCon;
+
+        size_t mCount;
+        size_t mMax;
+
+        void Reset()
+        {
+            mCount = mMax;
+            std::condition_variable *tmpCon = mCurrentCon;
+            mCurrentCon = mPreviousCon;
+            mPreviousCon = tmpCon;
+
+            tmpCon->notify_all();
+        }
     };
 } // namespace SyncLibInternal
 

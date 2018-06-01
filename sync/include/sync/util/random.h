@@ -24,60 +24,64 @@
  * @endcond
  */
 #pragma once
-#ifndef __SYNCLIB_SPINBARRIER_H__
-#define __SYNCLIB_SPINBARRIER_H__
+#ifndef __SYNCLIB_RANDOM_H__
+#define __SYNCLIB_RANDOM_H__
 
-#include "sync/util/assert.h"
-
-#include <atomic>
-
-namespace SyncLibInternal
+namespace SyncLib
 {
-    class SpinBarrier
+    namespace Util
     {
-    public:
-        SpinBarrier(size_t count)
-            : mCount(count)
-            , mSpaces(count)
-            , mGeneration(0)
+        class LinearCongruentialRandom
         {
-        }
-
-        SpinBarrier(SpinBarrier &&barrier) noexcept
-            : SpinBarrier(barrier.mCount)
-        {
-        }
-
-        void Wait()
-        {
-            const size_t myGeneration = mGeneration;
-
-            if (!--mSpaces)
+        public:
+            LinearCongruentialRandom(const size_t seed, const size_t a = 1103515245, const size_t c = 12345)
+                : mCurrent(seed)
+                , mA(a)
+                , mC(c)
             {
-                mSpaces = mCount;
-                ++mGeneration;
             }
-            else
+
+            size_t Next()
             {
-                while (mGeneration == myGeneration)
-                    ;
+                mCurrent *= mA;
+                mCurrent += mC;
+                mCurrent &= 0x7FFFFFFF;
+
+                return mCurrent >> 16;
             }
-        }
 
-        void Resize(size_t count)
-        {
-            SyncLibInternal::Assert(mSpaces == mCount, "Count should be equal to Spaces on resize, were ({}, {})", mCount, mSpaces);
+            double NextDouble()
+            {
+                double x = 1.0 * Next();
+                x /= 0x7FFF;
+                x -= 0.5;
+                x *= 2;
 
-            mCount = count;
-            mSpaces = count;
-            mGeneration = 0;
-        }
+                return x;
+            }
 
-    private:
-        size_t mCount;
-        std::atomic_size_t mSpaces;
-        std::atomic_size_t mGeneration;
-    };
-} // namespace SyncLibInternal
+            using result_type = size_t;
+
+            constexpr static size_t max()
+            {
+                return 0x7FFF;
+            };
+
+            constexpr static size_t min()
+            {
+                return 0;
+            };
+
+            size_t operator()()
+            {
+                return Next();
+            }
+
+        private:
+            size_t mCurrent;
+            size_t mA, mC;
+        };
+    } // namespace Util
+} // namespace SyncLib
 
 #endif

@@ -24,36 +24,25 @@
  * @endcond
  */
 #pragma once
-#ifndef __DEFINES_H__
-#define __DEFINES_H__
+#ifndef __SYNCLIB_TIME_H__
+#define __SYNCLIB_TIME_H__
 
-// From boost
-#if !defined(SYNCLIB_FORCEINLINE)
-#  if defined(_MSC_VER)
-#    define SYNCLIB_FORCEINLINE __forceinline
-#  elif defined(__GNUC__) && __GNUC__ > 3
-// Clang also defines __GNUC__ (as 4)
-#    define SYNCLIB_FORCEINLINE inline __attribute__ ((__always_inline__))
-#  else
-#    define SYNCLIB_FORCEINLINE inline
-#  endif
-#endif
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 
-// From boost
-#if !defined(SYNCLIB_NOINLINE)
-#  if defined(_MSC_VER)
-#    define SYNCLIB_NOINLINE __declspec(noinline)
-#  elif defined(__GNUC__) && __GNUC__ > 3
-// Clang also defines __GNUC__ (as 4)
-#    if defined(__CUDACC__)
-// nvcc doesn't always parse __noinline__,
-#      define SYNCLIB_NOINLINE __attribute__ ((noinline))
-#    else
-#      define SYNCLIB_NOINLINE __attribute__ ((__noinline__))
-#    endif
-#  else
-#    define SYNCLIB_NOINLINE
-#  endif
-#endif
+namespace SyncLib
+{
+    namespace Util
+    {
+        inline std::string GetTimeString(const std::string_view &format = "%Y%m%d%H%M%S")
+        {
+            std::time_t tt = std::time(nullptr);
+            std::stringstream ss;
+            ss << std::put_time(std::localtime(&tt), format.data());
+            return ss.str();
+        }
+    } // namespace Util
+} // namespace SyncLib
 
 #endif

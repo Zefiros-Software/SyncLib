@@ -27,35 +27,68 @@
 #ifndef __SYNCLIB_THREADS_H__
 #define __SYNCLIB_THREADS_H__
 
-#include <future>
-#ifdef _WIN32
-#include <windows.h>
+#include "preproc/preproc.h"
+
+#ifdef IS_WINDOWS
 #endif
 
-namespace SyncLib
+#include "hwloc.h"
+
+namespace SyncLibInternal
 {
-    namespace Internal
+    class ThreadAffinityHelper
     {
-        inline void PinThread(size_t s)
+    public:
+        ThreadAffinityHelper()
         {
-#ifdef _WIN32
-            SetThreadIdealProcessor(GetCurrentThread(), static_cast<DWORD>(s));
-            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
-#endif // _WIN32
+            hwloc_topology_init(&mTopology);
+            hwloc_topology_load(mTopology);
 
-#if defined(__GNUC__) && !defined(__APPLE__)
-            int num_cores = std::thread::hardware_concurrency();
-            int core_id = s % num_cores;
-
-            cpu_set_t cpuset;
-            CPU_ZERO(&cpuset);
-            CPU_SET(core_id, &cpuset);
-
-            pthread_t current_thread = pthread_self();
-            pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
-#endif
+            mSocketCount = hwloc_get_nbobjs_by_type(mTopology, HWLOC_OBJ_PACKAGE);
+            mCoreCount = hwloc_get_nbobjs_by_type(mTopology, HWLOC_OBJ_CORE);
+            mThreadCount = hwloc_get_nbobjs_by_type(mTopology, HWLOC_OBJ_PU);
+            mCoresPerSocket = mCoreCount / mSocketCount;
+            mThreadsPerCore = mThreadCount / mCoreCount;
         }
-    }
-}
+
+        void PinThread(size_t s) const
+        {
+            const int S = static_cast<int>(s) % mThreadCount;
+
+            const int socketId = (S / mCoresPerSocket) % mSocketCount;
+            const int coreId = S % mCoresPerSocket;
+            const int thrId = (S / mCoresPerSocket) / mSocketCount;
+
+            hwloc_obj_t socket = hwloc_get_obj_by_type(mTopology, HWLOC_OBJ_PACKAGE, socketId);
+            hwloc_obj_t core = hwloc_get_obj_inside_cpuset_by_type(mTopology, socket->cpuset, HWLOC_OBJ_CORE, coreId);
+            hwloc_obj_t thr = core->children[thrId];
+
+            hwloc_set_cpubind(mTopology, thr->cpuset, HWLOC_CPUBIND_THREAD);
+        }
+
+        int GetCoreCount() const
+        {
+            return mCoreCount;
+        }
+
+        int GetThreadCount() const
+        {
+            return mThreadCount;
+        }
+
+        ~ThreadAffinityHelper()
+        {
+            hwloc_topology_destroy(mTopology);
+        }
+
+    private:
+        hwloc_topology_t mTopology{};
+        int mSocketCount;
+        int mCoreCount;
+        int mCoresPerSocket;
+        int mThreadCount;
+        int mThreadsPerCore;
+    };
+} // namespace SyncLibInternal
 
 #endif

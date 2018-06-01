@@ -33,78 +33,74 @@ namespace SyncLib
 {
     namespace Util
     {
-        template<typename tResolution = std::chrono::seconds>
+        template <typename tResolution = std::chrono::seconds>
         class Timer
         {
         public:
-
             Timer()
                 : mTic(Now())
-            {}
+            {
+            }
 
             void Tic()
             {
                 mTic = Now();
             }
 
-            double Toc()
-            {
-                throw;
-            }
+            double Toc() const;
 
             double TocTic()
             {
-                double dur = Toc();
+                const double dur = Toc();
                 Tic();
                 return dur;
             }
 
         private:
-
             std::chrono::high_resolution_clock::time_point mTic;
 
-            std::chrono::high_resolution_clock::time_point Now()
+            std::chrono::high_resolution_clock::time_point Now() const
             {
                 return std::chrono::high_resolution_clock::now();
             }
         };
 
-        template<>
-        double Timer<std::chrono::hours>::Toc()
+        template <>
+        inline double Timer<std::chrono::hours>::Toc() const
         {
             return std::chrono::duration_cast<std::chrono::seconds>(Now() - mTic).count() / 3600.0;
         }
 
-        template<>
-        double Timer<std::chrono::minutes>::Toc()
+        template <>
+        inline double Timer<std::chrono::minutes>::Toc() const
         {
             return std::chrono::duration_cast<std::chrono::milliseconds>(Now() - mTic).count() / 3600.0e3;
         }
 
-        template<>
-        double Timer<std::chrono::seconds>::Toc()
+        template <>
+        inline double Timer<std::chrono::seconds>::Toc() const
         {
             return std::chrono::duration_cast<std::chrono::microseconds>(Now() - mTic).count() / 1.0e6;
         }
 
-        template<>
-        double Timer<std::chrono::milliseconds>::Toc()
+        template <>
+        inline double Timer<std::chrono::milliseconds>::Toc() const
         {
             return std::chrono::duration_cast<std::chrono::nanoseconds>(Now() - mTic).count() / 1.0e6;
         }
 
-        template<>
-        double Timer<std::chrono::microseconds>::Toc()
+        template <>
+        inline double Timer<std::chrono::microseconds>::Toc() const
         {
             return std::chrono::duration_cast<std::chrono::nanoseconds>(Now() - mTic).count() / 1.0e3;
         }
 
-        template<>
-        double Timer<std::chrono::nanoseconds>::Toc()
+        template <>
+        inline double Timer<std::chrono::nanoseconds>::Toc() const
         {
             return static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(Now() - mTic).count());
         }
-    }
-}
+    } // namespace Util
+} // namespace SyncLib
 
 #endif
