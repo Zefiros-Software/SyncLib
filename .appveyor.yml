@@ -1,4 +1,3 @@
-image: Visual Studio 2017
 platform:
   - Win32
 build: off
@@ -6,7 +5,6 @@ environment:
   PYTHON: "C:\\Python35"
   PROJECT: SyncLib
   PROJECT_DIRECTORY: sync
-  VS_VERSION: vs2017
   matrix:  
     - TYPE: zpm
     - BUILD_CONFIG: release
@@ -18,8 +16,11 @@ environment:
     - BUILD_CONFIG: debug
       BUILD_ARCHITECTURE: x86_64
     - BUILD_CONFIG: release
+      BUILD_ARCHITECTURE: x86_64
+    - BUILD_CONFIG: release 
+      BUILD_ARCHITECTURE: x86_64
 install:
-  - powershell -command "Invoke-WebRequest -Uri https://raw.githubusercontent.com/Zefiros-Software/ZPM/features/refactor/script/install-zpm.bat -OutFile %TEMP%/install-zpm.bat" && %TEMP%/install-zpm.bat 
+  - powershell -command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri https://raw.githubusercontent.com/Zefiros-Software/ZPM/dev/script/install-zpm.bat -OutFile %TEMP%/install-zpm.bat;" && %TEMP%/install-zpm.bat 
   - "SET PATH=%PATH%;%USERPROFILE%/zpm/bin"
 test_script:
   - zpm run build-ci-library
