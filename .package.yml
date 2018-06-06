@@ -26,8 +26,8 @@ development:
       version: '@head'
   public:
     libraries:
-      - name: Zefiros-Software/PlotLib
-        version: ^2.0.0
+      # - name: Zefiros-Software/PlotLib
+      #   version: ^2.0.0
       - name: Zefiros-Software/Fmt
         version: ^4.0.0
       - name: Zefiros-Software/Armadillo
@@ -41,8 +41,8 @@ development:
       - name: Zefiros-Software/MKL
         version: '@head'
         settings:
-          backend: sequential
-          # backend: tbb
+          # backend: sequential
+          backend: tbb
 
           # # Inherited from arma:
           # blas95: true
