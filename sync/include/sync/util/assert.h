@@ -27,6 +27,8 @@
 #ifndef __SYNCLIB_ASSERT_H__
 #define __SYNCLIB_ASSERT_H__
 
+#include "fmt/format.h"
+
 #include "preproc/preproc.h"
 
 #include <cassert>

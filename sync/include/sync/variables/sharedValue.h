@@ -49,6 +49,17 @@ namespace SyncLibInternal
         {
         }
 
+        SharedValue &operator=(const tT &value)
+        {
+            mValue = value;
+            return *this;
+        }
+
+        operator const tT &()
+        {
+            return mValue;
+        }
+
         void Put(size_t target, const tT &value)
         {
             constexpr size_t requestSize = sizeof(DataType) + // DataType enum

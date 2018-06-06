@@ -93,6 +93,35 @@ workspace "SyncLib"
             "mpi-pingpong/*.h"
         }
 
+        project "mat-mat"
+            location "matmat"
+            kind "ConsoleApp"
+    
+            links "sync"
+    
+            mpi "On"
+            mpimt "On"
+            vectorextensions "avx2"
+    
+            useSyncLibraries()
+    
+            includedirs {
+                "matmat",
+                "sync/include"
+            }
+    
+            files {
+                "matmat/**/*.cpp",
+                "matmat/*.cpp",
+                "matmat/**/*.h",
+                "matmat/*.h"
+            }
+    
+            filter "system:not windows"
+                links "pthread"
+            
+            filter {}
+
     project "mat-mat"
         location "matmat"
         kind "ConsoleApp"
@@ -122,6 +151,35 @@ workspace "SyncLib"
         
         filter {}
 
+    project "lu"
+        location "lu"
+        kind "ConsoleApp"
+
+        links "sync"
+
+        mpi "On"
+        mpimt "On"
+        vectorextensions "avx2"
+
+        useSyncLibraries()
+
+        includedirs {
+            "lu",
+            "sync/include"
+        }
+
+        files {
+            "lu/**/*.cpp",
+            "lu/*.cpp",
+            "lu/**/*.h",
+            "lu/*.h"
+        }
+
+        filter "system:not windows"
+            links "pthread"
+        
+        filter {}
+
     project "edupack-bench"
         location "edupack"
         kind "ConsoleApp"
@@ -136,9 +194,9 @@ workspace "SyncLib"
 
         useSyncLibraries()
 
-        zpm.uses {
-            "Zefiros-Software/PlotLib"
-        }
+        -- zpm.uses {
+        --     "Zefiros-Software/PlotLib"
+        -- }
 
         includedirs {
             "edupack/bench",

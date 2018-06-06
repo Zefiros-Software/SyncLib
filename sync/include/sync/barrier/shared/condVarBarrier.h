@@ -36,11 +36,16 @@ namespace SyncLibInternal
     class CondVarBarrier
     {
     public:
-        explicit CondVarBarrier(const size_t count)
+        CondVarBarrier(const size_t count)
             : mCurrentCon(&mConVar1)
             , mPreviousCon(&mConVar2)
             , mCount(count)
             , mMax(count)
+        {
+        }
+
+        CondVarBarrier(CondVarBarrier &&barrier) noexcept
+            : CondVarBarrier(barrier.mCount)
         {
         }
 

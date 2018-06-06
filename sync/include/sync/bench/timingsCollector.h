@@ -27,7 +27,7 @@
 #ifndef __SYNCLIB_TIMINGSCOLLECTOR_H__
 #define __SYNCLIB_TIMINGSCOLLECTOR_H__
 
-#include "nlohmann/json.hpp"
+#include "sync/util/json.h"
 
 #include <armadillo>
 
@@ -119,75 +119,6 @@ namespace SyncLib
 // ReSharper disable CppInconsistentNaming
 namespace nlohmann
 {
-    template <>
-    struct adl_serializer<arma::vec>
-    {
-        static ::arma::vec from_json(const json &j)
-        {
-            const size_t size = j.size();
-            ::arma::vec vect = ::arma::zeros(size);
-
-            std::copy(j.begin(), j.end(), vect.begin());
-
-            return vect;
-        }
-
-        static void to_json(json &j, const ::arma::vec &vect)
-        {
-            for (auto &entry : vect)
-            {
-                j.push_back(entry);
-            }
-        }
-    };
-    template <>
-    struct adl_serializer<arma::rowvec>
-    {
-        static ::arma::rowvec from_json(const json &j)
-        {
-            const size_t size = j.size();
-            ::arma::rowvec vect = ::arma::zeros(size);
-
-            std::copy(j.begin(), j.end(), vect.begin());
-
-            return vect;
-        }
-
-        static void to_json(json &j, const ::arma::rowvec &vect)
-        {
-            for (auto &entry : vect)
-            {
-                j.push_back(entry);
-            }
-        }
-    };
-
-    template <>
-    struct adl_serializer<arma::mat>
-    {
-        static ::arma::mat from_json(const json &j)
-        {
-            const size_t rows = j.size();
-            ::arma::mat matrix = ::arma::zeros(j.size(), j[0].size());
-
-            for (size_t row = 0; row < rows; ++row)
-            {
-                ::arma::rowvec matRow = matrix.row(row);
-                std::copy(j[row].begin(), j[row].end(), matRow.begin());
-            }
-
-            return matrix;
-        }
-
-        static void to_json(json &j, const ::arma::mat &matrix)
-        {
-            for (size_t row = 0, rows = matrix.n_rows; row < rows; ++row)
-            {
-                j.push_back(::arma::rowvec(matrix.row(row)));
-            }
-        }
-    };
-
     template <>
     struct adl_serializer<SyncLib::Bench::AggregatedTimings>
     {

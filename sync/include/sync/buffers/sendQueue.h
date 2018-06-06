@@ -163,11 +163,11 @@ namespace SyncLibInternal
             return env.mPutBuffers;
         }
 
-        template <typename tEnv>
+        /*template <typename tEnv>
         static auto &GetSendInfo(tEnv &env)
         {
             return env.mSendQueueInfo;
-        }
+        }*/
 
         template <typename tEnv>
         static std::vector<typename tEnv::AbstractSendQueue *> &GetSendQueues(tEnv &env)
@@ -186,6 +186,8 @@ namespace SyncLibInternal
         {
             return env.mBackend;
         }
+
+        inline static thread_local bool isMainThread = true;
     };
 
     template <typename tEnvironment>
@@ -263,6 +265,11 @@ namespace SyncLibInternal
         void SetIndex(size_t index)
         {
             mIndex = index;
+        }
+
+        size_t GetSizeBytes() const
+        {
+            return mReceiveBuffer.Size();
         }
 
     protected:
@@ -622,7 +629,16 @@ namespace SyncLibInternal
         {
         }
 
+        SendQueueIterator(const SendQueueIterator &other)
+            : mCursor(other.mCursor),
+              mCurrentSize(other.mCurrentSize)
+        {
+        }
+
         using tValue = typename SendQueueElementHelper<tValues...>::template tTemplated<std::tuple>;
+
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = tValue;
 
         FORCEINLINE tValue operator*()
         {
@@ -737,6 +753,74 @@ namespace SyncLibInternal
         size_t mCurrentSize;
     };
 
+    template <typename tT, typename tVec>
+    class SingleValueVecSendQueueIterator
+    {
+    public:
+        SingleValueVecSendQueueIterator(const char *cursor)
+            : mCursor(cursor)
+            , mCurrentSize(0)
+        {
+        }
+
+        tVec operator*()
+        {
+            mCurrentSize = 0;
+
+            // Duplicate the pointer: it is modified by the Read
+            const char *cursor = mCursor;
+            return ArmaVecCursorHelper<tT, tVec>::Read(cursor, mCurrentSize);
+        }
+
+        SingleValueVecSendQueueIterator &operator++()
+        {
+            if (mCurrentSize == 0)
+            {
+                this->operator*();
+            }
+
+            mCursor += mCurrentSize;
+            mCurrentSize = 0;
+            return *this;
+        }
+
+        bool operator!=(const SingleValueVecSendQueueIterator &other)
+        {
+            return other.mCursor != mCursor;
+        }
+
+        bool operator==(const SingleValueVecSendQueueIterator &other)
+        {
+            return other.mCursor == mCursor;
+        }
+
+    private:
+        const char *mCursor;
+        size_t mCurrentSize;
+    };
+
+    template <typename tT>
+    class SingleValueSendQueueIterator<arma::Col<tT>, false> : public SingleValueVecSendQueueIterator<tT, arma::Col<tT>>
+    {
+    public:
+
+        template<typename... tArgs>
+        SingleValueSendQueueIterator(tArgs &&... args)
+            : SingleValueVecSendQueueIterator<tT, arma::Col<tT>>(std::forward<tArgs>(args)...)
+        {}
+    };
+
+    template <typename tT>
+    class SingleValueSendQueueIterator<arma::Row<tT>, false> : public SingleValueVecSendQueueIterator<tT, arma::Row<tT>>
+    {
+    public:
+
+        template<typename... tArgs>
+        SingleValueSendQueueIterator(tArgs &&... args)
+            : SingleValueVecSendQueueIterator<tT, arma::Row<tT>>(std::forward<tArgs>(args)...)
+        {}
+    };
+
     template <typename tEnvironment, typename tT, typename... tValues>
     class SendQueue : public AbstractSendQueue<tEnvironment>
     {
@@ -748,6 +832,9 @@ namespace SyncLibInternal
             : tParent(env)
         {
         }
+
+        SendQueue(const SendQueue &) = delete;
+        SendQueue(SendQueue &&) = delete;
 
         void Send(const size_t t, const tT &value1, const tValues &... values)
         {
@@ -892,4 +979,15 @@ namespace SyncLibInternal
         }
     };
 } // namespace SyncLibInternal
+
+namespace std
+{
+    template<typename... tValues>
+    struct iterator_traits<SyncLibInternal::SendQueueIterator<tValues...>>
+    {
+        using difference_type = ptrdiff_t;
+        using value_type = typename std::tuple<SyncLibInternal::tSendQueueElement<tValues>...>;
+        using iterator_category = std::forward_iterator_tag;
+    };
+}
 #endif

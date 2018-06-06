@@ -31,7 +31,9 @@
 #include <cstdio>
 
 #include "fmt/format.h"
-#include "plot/plotting.h"
+
+#include <armadillo>
+//#include "plot/plotting.h"
 
 #include "sync/sync.h"
 #include "sync/util/timer.h"

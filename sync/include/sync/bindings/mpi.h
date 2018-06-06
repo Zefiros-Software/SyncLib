@@ -27,6 +27,7 @@
 #ifndef __SYNCLIB_MPI_H__
 #define __SYNCLIB_MPI_H__
 #include "sync/buffers/put.h"
+#include "sync/util/algorithm.h"
 #include "sync/util/assert.h"
 
 #include "fmt/format.h"
@@ -57,65 +58,34 @@ namespace SyncLib
             }
         };
 
-        template <typename tT, MPI_Datatype tDataType>
-        struct TypesImpl
-        {
-            template <typename tSize = int>
-            static constexpr int Size(tSize count)
-            {
-                return static_cast<int>(count);
-            }
-
-            static constexpr auto Type()
-            {
-                return tDataType;
-            }
+#define SYNC_OVERRIDE_TYPES(tT, tDataType)                      \
+        template <>                                             \
+        struct Types<tT>                                        \
+        {                                                       \
+            template <typename tSize = int>                     \
+            static constexpr int Size(tSize count)              \
+            {                                                   \
+                return static_cast<int>(count);                 \
+            }                                                   \
+            static constexpr auto Type()                        \
+            {                                                   \
+                return tDataType;                               \
+            }                                                   \
         };
 
-        template <>
-        struct Types<char> : TypesImpl<char, MPI_BYTE>
-        {
-        };
-        template <>
-        struct Types<float> : TypesImpl<float, MPI_FLOAT>
-        {
-        };
-        template <>
-        struct Types<double> : TypesImpl<double, MPI_DOUBLE>
-        {
-        };
-        template <>
-        struct Types<int8_t> : TypesImpl<int8_t, MPI_INT8_T>
-        {
-        };
-        template <>
-        struct Types<int16_t> : TypesImpl<int16_t, MPI_INT16_T>
-        {
-        };
-        template <>
-        struct Types<int32_t> : TypesImpl<int32_t, MPI_INT32_T>
-        {
-        };
-        template <>
-        struct Types<int64_t> : TypesImpl<int64_t, MPI_INT64_T>
-        {
-        };
-        template <>
-        struct Types<uint8_t> : TypesImpl<uint8_t, MPI_UINT8_T>
-        {
-        };
-        template <>
-        struct Types<uint16_t> : TypesImpl<uint16_t, MPI_UINT16_T>
-        {
-        };
-        template <>
-        struct Types<uint32_t> : TypesImpl<uint32_t, MPI_UINT32_T>
-        {
-        };
-        template <>
-        struct Types<uint64_t> : TypesImpl<uint64_t, MPI_UINT64_T>
-        {
-        };
+        SYNC_OVERRIDE_TYPES(char, MPI_BYTE);
+        SYNC_OVERRIDE_TYPES(float, MPI_FLOAT);
+        SYNC_OVERRIDE_TYPES(double, MPI_DOUBLE);
+        SYNC_OVERRIDE_TYPES(int, MPI_INT);
+        SYNC_OVERRIDE_TYPES(int8_t, MPI_INT8_T);
+        SYNC_OVERRIDE_TYPES(int16_t, MPI_INT16_T);
+        //SYNC_OVERRIDE_TYPES(int32_t, MPI_INT32_T);
+        SYNC_OVERRIDE_TYPES(int64_t, MPI_INT64_T);
+        SYNC_OVERRIDE_TYPES(uint8_t, MPI_UINT8_T);
+        SYNC_OVERRIDE_TYPES(uint16_t, MPI_UINT16_T);
+        SYNC_OVERRIDE_TYPES(uint32_t, MPI_UINT32_T);
+        SYNC_OVERRIDE_TYPES(uint64_t, MPI_UINT64_T);
+#undef SYNC_OVERRIDE_TYPES
 
         inline void Init(int argc, char **argv)
         {
@@ -137,28 +107,44 @@ namespace SyncLib
         class NonBlockingRequest
         {
         public:
-            NonBlockingRequest(const MPI_Request &request)
-                : mRequest(request)
-                , mInitialised(true)
+            std::vector<MPI_Request> requests;
+            MPI_Request *request;
+            size_t requestCount;
+
+            NonBlockingRequest(const MPI_Request &req) = delete;
+
+            NonBlockingRequest()
+                : requests(1, MPI_REQUEST_NULL),
+                  request(&requests[0]),
+                  requestCount(1)
             {
             }
 
-            NonBlockingRequest()
-                : mRequest(MPI_REQUEST_NULL)
-                , mInitialised(false)
+            void Reserve(size_t count)
             {
+                requests.resize(count, MPI_REQUEST_NULL);
+                request = &requests[0];
+                requestCount = count;
             }
 
             void Wait()
             {
-                SyncLibInternal::Assert(mInitialised, "Request was not initialised when trying to wait for it");
-                MPI_Wait(&mRequest, MPI_STATUSES_IGNORE);
-                mInitialised = false;
+                //SyncLibInternal::Assert(mInitialised, "Request was not initialised when trying to wait for it");
+
+                if (requests.size() == 1)
+                {
+                    MPI_Wait(request, MPI_STATUS_IGNORE);
+                }
+                else
+                {
+                    MPI_Waitall(static_cast<int>(requestCount), requests.data(), MPI_STATUS_IGNORE);
+                }
+
+                //mInitialised = false;
             }
 
-        private:
-            MPI_Request mRequest;
-            bool mInitialised;
+            //         private:
+            //             bool mInitialised;
         };
 
         class Comm
@@ -214,8 +200,6 @@ namespace SyncLib
 
             ~Comm()
             {
-                Barrier();
-
                 if (mInitialized)
                 {
                     SyncLib::MPI::Finalise();
@@ -320,16 +304,59 @@ namespace SyncLib
             }
 
             template <typename tT>
-            NonBlockingRequest AllToAllVNonBlocking(const tT *sendBuffer, const int *sendCounts, const int *sendOffsets, tT *recvBuffer,
-                                                    const int *recvCounts,
-                                                    const int *recvOffsets)
+            void AllToAllVNonBlocking(const tT *sendBuffer, const int *sendCounts, const int *sendOffsets, tT *recvBuffer,
+                                      const int *recvCounts, const int *recvOffsets, NonBlockingRequest &request)
             {
                 using tTypeHelper = SyncLib::MPI::Types<tT>;
-                MPI_Request request;
                 MPI_Ialltoallv(sendBuffer, sendCounts, sendOffsets, tTypeHelper::Type(), recvBuffer, recvCounts, recvOffsets, tTypeHelper::Type(),
-                               mComm, &request);
+                               mComm, request.request);
+            }
 
-                return NonBlockingRequest(request);
+            template<typename tT>
+            void AllToAllVNonBlocking(const tT **sendBuffers, const int *sendSizes, tT **recvBuffers,
+                                      const int *recvSizes, NonBlockingRequest &request)
+            {
+                using tTypeHelper = SyncLib::MPI::Types<tT>;
+                request.Reserve(mSize * 2);
+
+                size_t r = 0;
+
+                for (size_t mask = 0; mask < mSizePow2; ++mask, ++r)
+                {
+                    int t = static_cast<int>(mRank ^ mask);
+
+                    if (t >= mSize || recvSizes[t] == 0 || t == mRank)
+                    {
+                        --r;
+                        continue;
+                    }
+
+                    MPI_Irecv(recvBuffers[t], recvSizes[t], tTypeHelper::Type(), t, 0, mComm, &request.requests[r]);
+                }
+
+                for (size_t mask = 0; mask < mSizePow2; ++mask, ++r)
+                {
+
+                    int t = static_cast<int>(mRank ^ mask);
+
+                    if (t >= mSize || sendSizes[t] == 0)
+                    {
+                        --r;
+                        continue;
+                    }
+
+                    if (t == mRank)
+                    {
+                        --r;
+                        std::copy_n(static_cast<const char *>(sendBuffers[t]), sendSizes[t], static_cast<char *>(recvBuffers[t]));
+                    }
+                    else
+                    {
+                        MPI_Isend(sendBuffers[t], sendSizes[t], tTypeHelper::Type(), t, 0, mComm, &request.requests[r]);
+                    }
+                }
+
+                request.requestCount = r;
             }
 
             template <typename tT>
@@ -371,14 +398,11 @@ namespace SyncLib
             }
 
             template <typename tT, typename tSize = int>
-            NonBlockingRequest AllToAllNonBlocking(const tT *sendBuffer, tT *recvBuffer, tSize count)
+            void AllToAllNonBlocking(const tT *sendBuffer, tT *recvBuffer, tSize count, NonBlockingRequest &request)
             {
                 using tTypeHelper = SyncLib::MPI::Types<tT>;
-                MPI_Request request;
                 MPI_Ialltoall(sendBuffer, tTypeHelper::Size(count), tTypeHelper::Type(), recvBuffer, tTypeHelper::Size(count),
-                              tTypeHelper::Type(), mComm, &request);
-
-                return NonBlockingRequest(request);
+                              tTypeHelper::Type(), mComm, request.request);
             }
 
             template <typename tT, typename tSize = int>
@@ -390,14 +414,11 @@ namespace SyncLib
             }
 
             template <typename tT, typename tSize = int>
-            NonBlockingRequest AllToAllNonBlocking(tT *buffer, tSize count)
+            void AllToAllNonBlocking(tT *buffer, tSize count, NonBlockingRequest &request)
             {
                 using tTypeHelper = SyncLib::MPI::Types<tT>;
-                MPI_Request request;
                 MPI_Ialltoall(MPI_IN_PLACE, tTypeHelper::Size(count), tTypeHelper::Type(), buffer, tTypeHelper::Size(count), tTypeHelper::Type(),
                               mComm, &request);
-
-                return NonBlockingRequest(request);
             }
 
             template <typename tT, typename tSize = int>
@@ -431,6 +452,15 @@ namespace SyncLib
                 MPI_Gather(sendBuffer, tTypeHelper::Size(sendCount), tTypeHelper::Type(), recvBuffer, tTypeHelper::Size(recvCount),
                            tTypeHelper::Type(), static_cast<int>(receiver),
                            mComm);
+            }
+
+            template <typename tT, typename tSize = int>
+            void GatherV(const tT *sendBuffer, tSize sendCount, tT *recvBuffer, int *recvCounts, int *recvDispls, tSize receiver)
+            {
+                using tTypeHelper = SyncLib::MPI::Types<tT>;
+                MPI_Gatherv(sendBuffer, tTypeHelper::Size(sendCount), tTypeHelper::Type(), recvBuffer, recvCounts, recvDispls,
+                            tTypeHelper::Type(), static_cast<int>(receiver),
+                            mComm);
             }
 
             template <typename tT, typename tSize = int>
@@ -525,40 +555,10 @@ namespace SyncLib
 
             inline void Barrier()
             {
+                /*WriteLogs(mLogBuffer);
+                mLogBuffer.Clear();*/
+
                 MPI_Barrier(mComm);
-
-                if (mRank == 0)
-                {
-                    for (size_t t = 1, size = Size(); t < size; ++t)
-                    {
-                        size_t length;
-                        Receive(t, length);
-
-                        if (length > 0)
-                        {
-                            char *buff = mLogBuffer.Reserve(length);
-                            Receive(t, buff, length);
-                        }
-                    }
-
-                    if (mLogBuffer.Size() > 0)
-                    {
-                        fwrite(mLogBuffer.Begin(), sizeof(char), mLogBuffer.Size(), stdout);
-                        fflush(stdout);
-                    }
-                }
-                else
-                {
-                    const size_t sLength = mLogBuffer.Size();
-                    Send(0, sLength);
-
-                    if (sLength > 0)
-                    {
-                        Send(0, mLogBuffer.Begin(), sLength);
-                    }
-                }
-
-                mLogBuffer.Clear();
             }
 
             template <typename tString, typename... tArgs>
@@ -587,12 +587,49 @@ namespace SyncLib
                     MPI_Comm_size(mComm, &size);
                     mSize = static_cast<size_t>(size);
                 }
+                {
+                    mSizePow2 = SyncLib::Util::NextPowerOfTwo(mSize);
+                }
+            }
+
+            inline void WriteLogs(SyncLibInternal::CommunicationBuffer &buffer)
+            {
+                const size_t bufferSize = buffer.Size();
+
+                if (mRank == 0)
+                {
+                    for (size_t t = 1; t < mSize; ++t)
+                    {
+                        size_t otherSize = 0;
+                        Receive(t, otherSize);
+
+                        if (otherSize > 0)
+                        {
+                            char *buff = buffer.Reserve(otherSize);
+                            Receive(t, buff, otherSize);
+                        }
+                    }
+
+                    if (buffer.Size() > 0)
+                    {
+                        std::cout.write(buffer.Begin(), buffer.Size());
+                    }
+                }
+                else
+                {
+                    Send(0, bufferSize);
+
+                    if (bufferSize > 0)
+                    {
+                        Send(0, buffer.Begin(), bufferSize);
+                    }
+                }
             }
 
             SyncLibInternal::CommunicationBuffer mLogBuffer;
             MPI_Comm mComm;
 
-            size_t mRank{}, mSize{};
+            size_t mRank, mSize, mSizePow2;
             bool mInitialized;
         };
     } // namespace MPI

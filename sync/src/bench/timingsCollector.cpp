@@ -24,8 +24,7 @@
  * @endcond
  */
 #include "sync/bench/timingsCollector.h"
-
-using json = ::nlohmann::json;
+#include "sync/util/json.h"
 
 SyncLib::Bench::TimingsCollector::TimingsCollector(size_t p, size_t s, size_t maxCount)
     : mTimings(p, std::vector<std::vector<double>>(maxCount))

@@ -35,6 +35,7 @@
 #include "sync/buffers/processor.h"
 #include "sync/buffers/sendQueue.h"
 #include "sync/util/algorithm.h"
+#include "sync/util/json.h"
 
 namespace SyncLib
 {
@@ -79,7 +80,9 @@ namespace SyncLib
             template <typename tFunc, typename... tArgs>
             inline auto Run(const tFunc &func, tArgs &&... args)
             {
-                return mBackend.Run(*this, func, std::forward<tArgs>(args)...);
+                mBackend.Run(*this, func, std::forward<tArgs>(args)...);
+                mVariables.clear();
+                mSendQueues.clear();
             }
 
             size_t Rank() const
@@ -124,6 +127,7 @@ namespace SyncLib
 
             void Sync()
             {
+                mBackend.CheckMainThread();
                 // const size_t s = Rank();
                 const size_t p = Size();
 
@@ -139,36 +143,23 @@ namespace SyncLib
                 {
                     mGetRequests.sendSizes[t] = static_cast<int>(mGetRequests.sendBuffers[t].Size());
                     mPutBuffers.sendSizes[t] = static_cast<int>(mPutBuffers.sendBuffers[t].Size());
+                    /*fmt::print("Put sizes: {}, get sizes: {} on node {}\n", json(arma::conv_to<arma::Col<int>>::from(mGetRequests.sendSizes)).dump(),
+                               json(arma::conv_to<arma::Col<int>>::from(mPutBuffers.sendSizes)).dump(), Rank());*/
                 }
 
                 size_t sqCount = mSendQueues.size();
 
-                mSendQueueInfo.Clear();
-                {
-                    for (size_t i = 0; i < sqCount; ++i)
-                    {
-                        const size_t sqOffset = i * p;
-
-                        if (mSendQueues[i])
-                        {
-                            const char *sqBufferBegin = mSendQueues[i]->GetTargetBuffer(0).Begin();
-
-                            for (size_t t = 0; t < p; ++t)
-                            {
-                                const char *sqBuffer = mSendQueues[i]->GetTargetBuffer(t).Begin();
-
-                                mSendQueueInfo.sendSizes[sqOffset + t] = static_cast<int>(mSendQueues[i]->GetTargetSize(t));
-                                mSendQueueInfo.sendDisplacements[sqOffset + t] = static_cast<int>(sqBuffer - sqBufferBegin);
-                                mSendQueueInfo.sendCounts[sqOffset + t] = static_cast<int>(mSendQueues[i]->GetTargetCount(t));
-                            }
-                        }
-                    }
-                }
+                // fmt::print("Exchanging sizes on node {}\n", mBackend.Rank());
+                // fflush(stdout);
                 mBackend.ExchangeSizes(*this);
-
+                // fmt::print("Synchronising get requests, put buffers and send queue on node {}\n", mBackend.Rank());
+                // fflush(stdout);
                 mBackend.SynchroniseGetRequestsPutBuffersSendQueues(*this);
-
+                // fmt::print("Waiting for Get requests on node {}\n", mBackend.Rank());
+                // fflush(stdout);
                 mBackend.WaitForGetRequests();
+                // fmt::print("Clearing Get buffers on node {}\n", mBackend.Rank());
+                // fflush(stdout);
                 mGetBuffers.ClearSendBuffers();
 
                 for (size_t t = 0; t < p; ++t)
@@ -176,7 +167,11 @@ namespace SyncLib
                     BufferGet(t);
                 }
 
+                // fmt::print("Synchronising Get buffers on node {}\n", mBackend.Rank());
+                // fflush(stdout);
                 mBackend.SynchroniseGetBuffers(*this);
+                // fmt::print("Waiting for put buffers on node {}\n", mBackend.Rank());
+                // fflush(stdout);
                 mBackend.WaitForPutBuffers();
 
                 for (size_t t = 0; t < p; ++t)
@@ -184,6 +179,8 @@ namespace SyncLib
                     ProcessPut(t);
                 }
 
+                // fmt::print("Waiting for get buffers on node {}\n", mBackend.Rank());
+                // fflush(stdout);
                 mBackend.WaitForGetBuffers();
 
                 for (size_t t = 0; t < p; ++t)
@@ -191,7 +188,11 @@ namespace SyncLib
                     ProcessGet(t);
                 }
 
-                mBackend.WaitForSendQueues(sqCount);
+                // fmt::print("Waiting for send queues on node {}\n", mBackend.Rank());
+                // fflush(stdout);
+                mBackend.WaitForSendQueues(sqCount, *this);
+                // fmt::print("Finishing up on node {}\n", mBackend.Rank());
+                // fflush(stdout);
 
                 mGetRequests.ClearSendBuffers();
                 mPutBuffers.ClearSendBuffers();
@@ -219,7 +220,7 @@ namespace SyncLib
         private:
             tBackend mBackend;
 
-            struct
+            /*struct
             {
                 std::vector<int> sendSizes;
                 std::vector<int> sendDisplacements;
@@ -253,7 +254,7 @@ namespace SyncLib
                 {
                     info.resize(info.size() + p);
                 }
-            } mSendQueueInfo;
+            } mSendQueueInfo;*/
 
             tBuffer mGetRequests;
             tBuffer mGetBuffers;
@@ -267,7 +268,6 @@ namespace SyncLib
             {
                 const size_t size = mSendQueues.size();
                 mSendQueues.push_back(queue);
-                mSendQueueInfo.Grow(Size());
                 return size;
             }
 
@@ -289,8 +289,10 @@ namespace SyncLib
                 mVariables[index] = nullptr;
             }
 
-            void AddGetBufferSize(const size_t target, const size_t size) const
+            void AddGetBufferSize(const size_t target, const size_t size)
             {
+                // fmt::print("Adding size {} for target {} on node {}", size, target, Rank());
+                // fflush(stdout);
                 mGetRequests.sendSizes[target] += static_cast<int>(size);
             }
 

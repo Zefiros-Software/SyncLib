@@ -27,11 +27,11 @@
 #ifndef __SYNCLIB_MPIPINGPONG_H__
 #define __SYNCLIB_MPIPINGPONG_H__
 
+#include "sync/util/json.h"
+
 #include "sync/bench/timingsCollector.h"
 
 #include "sync/bindings/mpi.h"
-
-#include "nlohmann/json.hpp"
 
 #include <armadillo>
 
@@ -52,7 +52,7 @@ namespace SyncLib
             void Serialise(std::ostream &out = std::cout);
             std::tuple<arma::mat, arma::mat> ComputePairwise();
 
-            static std::tuple<arma::mat, arma::mat> ComputePairwise(const nlohmann::json &j)
+            static std::tuple<arma::mat, arma::mat> ComputePairwise(const json &j)
             {
                 arma::vec domain = j["domain"];
                 auto &data = j["data"];

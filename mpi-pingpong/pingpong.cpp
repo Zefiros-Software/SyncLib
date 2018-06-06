@@ -32,8 +32,6 @@
 
 #include "fmt/format.h"
 
-#include "nlohmann/json.hpp"
-
 #include "fs/fs.h"
 
 #include <armadillo>

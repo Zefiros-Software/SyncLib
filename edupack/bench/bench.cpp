@@ -27,13 +27,12 @@
 #include "sync/bench/partitioning.h"
 #include "sync/sync.h"
 #include "sync/util/algorithm.h"
+#include "sync/util/json.h"
 
 #include "bench.h"
 
 #include "args/args.h"
 #include "preproc/preproc.h"
-
-#include "nlohmann/json.hpp"
 
 #include <armadillo>
 
@@ -325,14 +324,15 @@ void Pause(bool)
 }
 #endif
 
-template <typename tEnv, typename... tArgs>
-void RunBenchmark(Args &parser, bool pause, tArgs &&... args)
+template <typename tEnv/*, typename... tArgs*/>
+void RunBenchmark(Args &parser, tEnv &env /*bool pause, tArgs &&... args*/)
 {
-    Pause(pause && parser.GetOption("start-paused"));
+    Pause(env.Rank() == 0 && parser.GetOption("start-paused"));
     uint32_t maxH = parser.GetOption("h");
     uint32_t maxN = parser.GetOption("n");
     uint32_t niters = parser.GetOption("i");
     uint32_t batchSize = parser.GetOption("b");
+    uint32_t parts = parser.GetOption("parts");
     auto outputOption = parser.GetOption("o");
     std::string output;
 
@@ -357,9 +357,24 @@ void RunBenchmark(Args &parser, bool pause, tArgs &&... args)
         }
     }
 
-    tEnv env(std::forward<tArgs>(args)...);
-    env.Run(BspBench<tEnv>, maxH, maxN, niters, batchSize, output, printH);
-    Pause(pause && parser.GetOption("exit-paused"));
+    // tEnv env(std::forward<tArgs>(args)...);
+
+    if (parts > 1)
+    {
+        const auto &splitBench = [&](tEnv & env0)
+        {
+            size_t partSize = (env0.Size() + parts - 1) / parts;
+            auto &env1 = env0.Split(env0.Rank() / partSize, env0.Rank());
+            BspBench<tEnv>(env1, maxH, maxN, niters, batchSize, output, printH);
+        };
+        env.Run(splitBench);
+    }
+    else
+    {
+        env.Run(BspBench<tEnv>, maxH, maxN, niters, batchSize, output, printH);
+    }
+
+    Pause(env.Rank() == 0 && parser.GetOption("exit-paused"));
 }
 
 #if defined(_DEBUG)
@@ -562,39 +577,41 @@ int main(int argc, char **argv)
 
     if (comm.Size() > 1)
     {
-        char parsed = false;
-
-        if (comm.Rank() == 0)
-        {
-            args.Parse(argc, argv);
-            parsed = true;
-        }
-
-        comm.Broadcast(parsed, 0);
-
-        if (parsed && comm.Rank() != 0)
-        {
-            args.Parse(argc, argv);
-        }
-
-        // SyncLib::Internal::PinThread(comm.Rank());
-
-        const uint32_t parts = args.GetOption("parts");
-        //         Pause(comm.Rank() == 0);
-        //         comm.Barrier();
+        //         char parsed = false;
+        //
+        //         if (comm.Rank() == 0)
+        //         {
+        //             args.Parse(argc, argv);
+        //             parsed = true;
+        //         }
+        //
+        //         comm.Broadcast(parsed, 0);
+        //
+        //         if (parsed && comm.Rank() != 0)
+        //         {
+        //             args.Parse(argc, argv);
+        //         }
+        //
+        //         // SyncLib::Internal::PinThread(comm.Rank());
+        //
+        //         // const uint32_t parts = args.GetOption("parts");
+        //         //         Pause(comm.Rank() == 0);
+        //         //         comm.Barrier();
         using tEnv = SyncLib::Environments::DistributedBSP;
-        tEnv env(argc, argv);
-        env.Split(0, env.Size() - env.Rank());
-
-        if (parts > 1)
+        //         tEnv env(argc, argv);
+        //         env.Split(0, env.Size() - env.Rank());
+        //
+        //         if (parts > 1)
+        //         {
+        //             const size_t partSize = (comm.Size() + parts - 1) / parts;
+        //             auto comm2 = comm.Split(comm.Rank() / partSize, comm.Rank() % partSize);
+        //             RunBenchmark<tEnv>(args, comm2.Rank() == 0, comm2);
+        //         }
+        //         else
         {
-            const size_t partSize = (comm.Size() + parts - 1) / parts;
-            auto comm2 = comm.Split(comm.Rank() / partSize, comm.Rank() % partSize);
-            RunBenchmark<tEnv>(args, comm2.Rank() == 0, comm2);
-        }
-        else
-        {
-            RunBenchmark<tEnv>(args, comm.Rank() == 0, comm);
+            tEnv env(comm);
+            args.Parse(argc, argv);
+            RunBenchmark<tEnv>(args, env);
         }
     }
     else
@@ -617,8 +634,11 @@ int main(int argc, char **argv)
 
         args.Parse(argc, argv);
         uint32_t p = args.GetOption("processors");
+        tEnv env(p);
 
-        RunBenchmark<tEnv>(args, true, p);
+        //const uint32_t parts = args.GetOption("parts");
+
+        RunBenchmark<tEnv>(args, env);
     }
 
     // fflush(stdout);

@@ -26,8 +26,8 @@
 #include "sync/bench/mpiPingpong.h"
 #include "sync/util/algorithm.h"
 #include "sync/util/timer.h"
+#include "sync/util/json.h"
 
-using json = nlohmann::json;
 using namespace SyncLib::Bench;
 
 MPIPingPongBenchmark::MPIPingPongBenchmark(SyncLib::MPI::Comm &comm,

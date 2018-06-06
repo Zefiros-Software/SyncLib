@@ -37,30 +37,6 @@
   },
   "public": {
     "libraries": [ {
-      "definition": "https://github.com/Zefiros-Software/PlotLib.git",
-      "hash": "fbc6d075a362053fe65e8b6896e8bf84218cd8dd",
-      "name": "Zefiros-Software/PlotLib",
-      "optionals": {
-        "libraries": [ {
-          "name": "Zefiros-Software/Armadillo",
-          "versionRequirement": ">=7.800.0"
-        } ]
-      },
-      "private": {
-        "modules": [ {
-          "definition": "https://github.com/Zefiros-Software/Miniconda.git",
-          "hash": "a72fd309fcdbd684a4f1bd9d4fd9e835562beea6",
-          "name": "Zefiros-Software/Miniconda",
-          "repository": "https://github.com/Zefiros-Software/Miniconda.git",
-          "tag": "HEAD",
-          "versionRequirement": "@head"
-        } ]
-      },
-      "repository": "https://github.com/Zefiros-Software/PlotLib.git",
-      "tag": "2.0.3",
-      "version": "2.0.3",
-      "versionRequirement": "^2.0.0"
-    }, {
       "definition": "https://github.com/Zefiros-Software/Fmt.git",
       "hash": "135ab5cf71ed731fc9fa0653051e7d4884a3652f",
       "name": "Zefiros-Software/Fmt",
@@ -121,7 +97,7 @@
       "name": "Zefiros-Software/MKL",
       "repository": "https://github.com/Zefiros-Software/MKL.git",
       "settings": {
-        "backend": "sequential"
+        "backend": "tbb"
       },
       "tag": "HEAD",
       "versionRequirement": "@head"
@@ -140,8 +116,8 @@
               "hash": "c8c26821b9ab850ace7bbaf0d22f347a1486ff6d",
               "name": "Zefiros-Software/Predef",
               "repository": "https://github.com/boostorg/predef.git",
-              "tag": "boost-1.67.0",
-              "version": "1.67.0",
+              "tag": "boost-1.66.0",
+              "version": "1.66.0",
               "versionRequirement": ">1.65.0 || @head"
             } ]
           },

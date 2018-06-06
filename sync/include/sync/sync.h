@@ -37,6 +37,26 @@ namespace SyncLib
     {
         using SharedMemoryBSP = BaseBSP<SyncLibInternal::SharedMemoryBackend>;
         using DistributedBSP = BaseBSP<SyncLibInternal::MPIBackend>;
+        struct NoBSP
+        {
+            template<typename... tArgs>
+            NoBSP(tArgs &&...)
+            {}
+
+            constexpr size_t Rank()
+            {
+                return 0;
+            }
+
+            constexpr void Barrier()
+            {}
+
+            template <typename tFunc, typename... tArgs>
+            inline void Run(const tFunc &f, tArgs &&... args)
+            {
+                f(*this, std::forward<tArgs>(args)...);
+            }
+        };
     } // namespace Environments
 } // namespace SyncLib
 

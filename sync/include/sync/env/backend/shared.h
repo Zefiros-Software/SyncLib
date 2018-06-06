@@ -27,10 +27,14 @@
 #ifndef __SYNCLIB_BACKEND_SHARED_H__
 #define __SYNCLIB_BACKEND_SHARED_H__
 
+#include "sync/barrier/shared/condVarBarrier.h"
 #include "sync/barrier/shared/spinBarrier.h"
 #include "sync/env/base.h"
 #include "sync/util/threads.h"
 
+#ifdef IS_WINDOWS
+#include <execution>
+#endif
 #include <thread>
 
 namespace SyncLibInternal
@@ -80,16 +84,40 @@ namespace SyncLibInternal
         template <typename tFunc, typename... tArgs>
         inline auto Run(tEnv &env, const tFunc &func, tArgs &&... args)
         {
-            mOthers.resize(env.Size());
             EnvHelper::GetSendQueues(env).clear();
             EnvHelper::GetVariables(env).clear();
+            mOthers.resize(env.Size());
+            bool isMain = EnvHelper::isMainThread;
 
+            // #ifdef IS_WINDOWS
+            //             arma::Col<size_t> S = arma::regspace<arma::Col<size_t>>(0, env.Size() - 1);
+            //             std::for_each(std::execution::par, S.begin(), S.end(), [ &, this](size_t s)
+            //             {
+            //                 if (s == 0)
+            //                 {
+            //                     mOthers[0] = &env;
+            //                     EnvHelper::isMainThread = true;
+            //                     //env.Barrier();
+            //                     func(env, std::forward<tArgs>(args)...);
+            //                 }
+            //                 else
+            //                 {
+            //                     tEnv otherEnv(*this, s);
+            //                     mOthers[s] = &otherEnv;
+            //                     EnvHelper::isMainThread = false;
+            //                     //otherEnv.Barrier();
+            //
+            //                     func(otherEnv, std::forward<tArgs>(args)...);
+            //                 }
+            //             });
+            // #else
             auto lambda = [&](size_t s)
             {
                 tEnv otherEnv(*this, s);
                 mOthers[s] = &otherEnv;
                 mThreadAffinityHelper.PinThread(s);
-                otherEnv.Barrier();
+                EnvHelper::isMainThread = false;
+                //otherEnv.Barrier();
 
                 return func(otherEnv, std::forward<tArgs>(args)...);
             };
@@ -104,7 +132,7 @@ namespace SyncLibInternal
             }
 
             mThreadAffinityHelper.PinThread(0);
-            env.Barrier();
+            //env.Barrier();
             func(env, std::forward<tArgs>(args)...);
 
             for (auto &thr : threads)
@@ -114,6 +142,10 @@ namespace SyncLibInternal
                     thr.join();
                 }
             }
+
+            //#endif
+
+            EnvHelper::isMainThread = isMain;
 
             for (tEnv *subEnv : mSubEnvs)
             {
@@ -138,7 +170,14 @@ namespace SyncLibInternal
 
         void Barrier() const
         {
-            mBarrier.Wait();
+            //if (mOthers[0])
+            {
+                mBarrier.Wait();
+            }
+        }
+
+        void CheckMainThread() const
+        {
         }
 
         static size_t MaxSize()
@@ -154,7 +193,10 @@ namespace SyncLibInternal
         tEnv &Split(size_t part, size_t rank)
         {
             mSubEnvInit.emplace_back(part, rank);
+            //             fmt::print("{} enters split with ({}, {})\n", mRank, part, rank);
+            //             fflush(stdout);
             Barrier();
+            //            fmt::print("\n");
 
             std::vector<std::tuple<size_t, size_t>> partMembers;
 
@@ -178,6 +220,7 @@ namespace SyncLibInternal
             }
 
             Barrier();
+            //fmt::print("{} joins part {} of size {} with rank {}\n", mRank, part, partMembers.size(), newRank);
 
             if (newRank != 0)
             {
@@ -235,7 +278,7 @@ namespace SyncLibInternal
 
             const auto &sendQueues = EnvHelper::GetSendQueues(env);
             const size_t sqCount = sendQueues.size();
-            auto &sendInfo = EnvHelper::GetSendInfo(env);
+            //auto &sendInfo = EnvHelper::GetSendInfo(env);
 
             for (size_t t = 0; t < mSize; ++t)
             {
@@ -244,7 +287,7 @@ namespace SyncLibInternal
                 getBuffers.receiveSizes[t] = EnvHelper::GetGetBuffers<tBuffer>(otherEnv).sendSizes[s];
                 putBuffers.receiveSizes[t] = EnvHelper::GetPutBuffers<tBuffer>(otherEnv).sendSizes[s];
 
-                for (size_t i = 0; i < sqCount; ++i)
+                /*for (size_t i = 0; i < sqCount; ++i)
                 {
                     if (sendQueues[i] == nullptr)
                     {
@@ -255,12 +298,14 @@ namespace SyncLibInternal
 
                     sendInfo.receiveSizes[sqOffset + t] = EnvHelper::GetSendInfo(otherEnv).sendSizes[sqOffset + s];
                     sendInfo.receiveCounts[sqOffset + t] = EnvHelper::GetSendInfo(otherEnv).sendCounts[sqOffset + s];
-                }
+                }*/
             }
         }
 
         void SynchroniseGetRequestsPutBuffersSendQueues(tEnv &env)
         {
+            size_t s = env.Rank();
+
             auto &getRequests = EnvHelper::GetGetRequests<tBuffer>(env);
             auto &putBuffers = EnvHelper::GetPutBuffers<tBuffer>(env);
 
@@ -270,7 +315,7 @@ namespace SyncLibInternal
 
             auto &sendQueues = EnvHelper::GetSendQueues(env);
             const size_t sqCount = sendQueues.size();
-            auto &sendInfo = EnvHelper::GetSendInfo(env);
+            //auto &sendInfo = EnvHelper::GetSendInfo(env);
             sqCursors.reserve(sqCount);
 
             for (size_t i = 0; i < sqCount; ++i)
@@ -287,9 +332,10 @@ namespace SyncLibInternal
 
                 for (size_t t = 0; t < mSize; ++t)
                 {
-                    sendInfo.receiveDisplacements[sqOffset + t] = static_cast<int>(receiveDisplacement);
-                    receiveDisplacement += sendInfo.receiveSizes[sqOffset + t];
-                    receiveCount += sendInfo.receiveCounts[sqOffset + t];
+                    auto &sq = *EnvHelper::GetSendQueues(*mOthers[t])[i];
+                    //sendInfo.receiveDisplacements[sqOffset + t] = static_cast<int>(receiveDisplacement);
+                    receiveDisplacement += sq.GetTargetSize(s);//sendInfo.receiveSizes[sqOffset + t];
+                    receiveCount += sq.GetTargetCount(s);//sendInfo.receiveCounts[sqOffset + t];
                 }
 
                 char *dest = sendQueues[i]->ReserveReceiveSpace(receiveCount, receiveDisplacement);
@@ -319,7 +365,8 @@ namespace SyncLibInternal
                     auto &otherQueue = *EnvHelper::GetSendQueues(*mOthers[t])[i];
                     // auto &otherInfo = EnvHelper::GetSendInfo(*mOthers[t]);
                     std::copy_n(otherQueue.GetTargetBuffer(mRank).Begin(), // + otherInfo.sendDisplacements[sqOffset + t],
-                                sendInfo.receiveSizes[sqOffset + t], sqCursors[i] + sendInfo.receiveDisplacements[sqOffset + t]);
+                                otherQueue.GetTargetSize(mRank), sqCursors[i]);
+                    sqCursors[i] += otherQueue.GetTargetSize(mRank);
                 }
             }
 
@@ -373,7 +420,7 @@ namespace SyncLibInternal
         {
         }
 
-        void WaitForSendQueues(size_t /*sqCount*/)
+        void WaitForSendQueues(size_t /*sqCount*/, tEnv & /*env*/)
         {
             if (!mSendQueueRemoval.empty())
             {

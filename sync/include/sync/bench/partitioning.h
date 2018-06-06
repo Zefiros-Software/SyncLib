@@ -32,8 +32,6 @@
 
 #include "fmt/format.h"
 
-#include "nlohmann/json.hpp"
-
 #include <armadillo>
 
 #include <algorithm>
@@ -426,7 +424,8 @@ namespace SyncLib
 
                                 const double cost = hasThreeParts
                                                     ? std::max({ worstPart->WorstCostAfterReplace(worstSample, sample2Glob),
-                                                                 part1->WorstCostAfterReplace(sample1, worstSampleGlob), part2.WorstCostAfterReplace(sample2, sample1Glob) })
+                                                                 part1->WorstCostAfterReplace(sample1, worstSampleGlob), part2.WorstCostAfterReplace(sample2, sample1Glob)
+                                                               })
                                                     : std::max(
                                 {
                                     worstPart->WorstCostAfterReplace(worstSample, sample1Glob),

@@ -38,7 +38,7 @@ namespace SyncLibInternal
     class CommunicationBuffer
     {
     public:
-        CommunicationBuffer(size_t initialSize = 1024)
+        CommunicationBuffer(size_t initialSize = 102400)
             : mData(initialSize)
             , mCursor(0)
             , mSize(initialSize)
@@ -74,7 +74,8 @@ namespace SyncLibInternal
 
         const size_t &Size() const
         {
-            SyncLibInternal::Assert(mCursor <= mData.size(), "Cursor has written beyond the size");
+            SyncLibInternal::Assert(mCursor <= mData.size(), "Cursor has written beyond the size. Cursor: {}, size: {}\n",
+                                    mCursor, mData.size());
             return mCursor;
         }
 
@@ -96,21 +97,25 @@ namespace SyncLibInternal
     {
         DistributedCommunicationBuffer(size_t p)
             : sendBuffers(p)
-            , sizesDisplacements(p * 4)
-            , sendDisplacements(&sizesDisplacements[0])
-            , sendSizes(&sizesDisplacements[p])
-            , receiveDisplacements(&sizesDisplacements[2 * p])
-            , receiveSizes(&sizesDisplacements[3 * p])
+              //, sizesDisplacements(p * 4)
+            , sendDisplacements(p)
+            , sendSizes(p)
+            , receiveDisplacements(p)
+            , receiveSizes(p)
         {
         }
 
         std::vector<CommunicationBuffer> sendBuffers;
         CommunicationBuffer receiveBuffer;
-        std::vector<int> sizesDisplacements;
-        int *sendDisplacements;
-        int *sendSizes;
-        int *receiveDisplacements;
-        int *receiveSizes;
+        //std::vector<int> sizesDisplacements;
+        std::vector<int> sendDisplacements;
+        std::vector<int> sendSizes;
+        std::vector<int> receiveDisplacements;
+        std::vector<int> receiveSizes;
+        //         int *sendDisplacements;
+        //         int *sendSizes;
+        //         int *receiveDisplacements;
+        //         int *receiveSizes;
 
         void ClearSendBuffers()
         {
@@ -119,7 +124,16 @@ namespace SyncLibInternal
                 buff.Clear();
             }
 
-            std::fill(sizesDisplacements.begin(), sizesDisplacements.end(), 0);
+            // std::fill(sizesDisplacements.begin(), sizesDisplacements.end(), 0);
+            ClearCounts(sendDisplacements);
+            ClearCounts(sendSizes);
+            ClearCounts(receiveDisplacements);
+            ClearCounts(receiveSizes);
+        }
+
+        void ClearCounts(std::vector<int> &buffer)
+        {
+            std::fill(buffer.begin(), buffer.end(), 0);
         }
     };
 } // namespace SyncLibInternal

@@ -58,6 +58,8 @@ namespace SyncLibInternal
             const int socketId = (S / mCoresPerSocket) % mSocketCount;
             const int coreId = S % mCoresPerSocket;
             const int thrId = (S / mCoresPerSocket) / mSocketCount;
+            /*fmt::print("Pinning {} to ({}, {}, {}) of the available ({}, {}, {})\n", s, socketId, coreId, thrId, mSocketCount,
+                       mCoresPerSocket, mThreadsPerCore);*/
 
             hwloc_obj_t socket = hwloc_get_obj_by_type(mTopology, HWLOC_OBJ_PACKAGE, socketId);
             hwloc_obj_t core = hwloc_get_obj_inside_cpuset_by_type(mTopology, socket->cpuset, HWLOC_OBJ_CORE, coreId);
